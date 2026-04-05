@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "417410252069",
+    "project_id": "graduatejobmatcher",
+    "storage_bucket": "graduatejobmatcher.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:417410252069:android:ef3ebede39e18c6a7f2ecc",
+        "android_client_info": {
+          "package_name": "com.example.graduatejobmatcher"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDY8FlP9y5FHfPxLKZ24eeSlgj68OaausE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
