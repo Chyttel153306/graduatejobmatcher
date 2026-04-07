@@ -65,8 +65,10 @@ fun LoginScreen(navController: NavController, viewModel: AppViewModel) {
                         focusedContainerColor = Color(0xFFE8E8E8),
                         unfocusedContainerColor = Color(0xFFE8E8E8),
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedIndicatorColor = Color.LightGray,
-                        cursorColor = Color.Black
+                        focusedIndicatorColor = Color.Black,
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
             }
@@ -98,8 +100,10 @@ fun LoginScreen(navController: NavController, viewModel: AppViewModel) {
                         focusedContainerColor = Color(0xFFE8E8E8),
                         unfocusedContainerColor = Color(0xFFE8E8E8),
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedIndicatorColor = Color.LightGray,
-                        cursorColor = Color.Black
+                        focusedIndicatorColor = Color.Black,
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
             }

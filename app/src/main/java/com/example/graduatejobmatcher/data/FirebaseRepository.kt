@@ -100,6 +100,29 @@ class FirebaseRepository {
         return db.collection("jobs").get().await().toObjects(Job::class.java)
     }
 
+    // NEW: Get jobs posted by a specific employer
+    suspend fun getJobsForEmployer(employerId: String): List<Job> {
+        return db.collection("jobs")
+            .whereEqualTo("employerId", employerId)
+            .get().await()
+            .toObjects(Job::class.java)
+    }
+
+    // NEW: Get total number of applications across all jobs of an employer
+    suspend fun getTotalApplicationsForEmployer(employerId: String): Int {
+        val jobs = getJobsForEmployer(employerId)
+        if (jobs.isEmpty()) return 0
+        var total = 0
+        for (job in jobs) {
+            val count = db.collection("applications")
+                .whereEqualTo("jobId", job.jobId)
+                .get().await()
+                .size()
+            total += count
+        }
+        return total
+    }
+
     // ---------- Application Methods ----------
     suspend fun applyJob(application: Application) {
         val id = db.collection("applications").document().id

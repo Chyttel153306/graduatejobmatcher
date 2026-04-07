@@ -5,6 +5,16 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.graduatejobmatcher.screens.*
+import com.example.graduatejobmatcher.screens.admin.AdminDashboardScreen
+import com.example.graduatejobmatcher.screens.admin.ManageUsersScreen
+import com.example.graduatejobmatcher.screens.admin.PendingJobsScreen
+import com.example.graduatejobmatcher.screens.employer.EmployerApplicantsScreen
+import com.example.graduatejobmatcher.screens.employer.EmployerDashboardScreen
+import com.example.graduatejobmatcher.screens.employer.PostJobScreen
+import com.example.graduatejobmatcher.screens.employer.ViewApplicantsScreen
+import com.example.graduatejobmatcher.screens.student.ApplyJobScreen
+import com.example.graduatejobmatcher.screens.student.JobListScreen
+import com.example.graduatejobmatcher.screens.student.StudentDashboardScreen
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 sealed class Screen(val route: String) {
@@ -26,6 +36,9 @@ sealed class Screen(val route: String) {
     }
     object ManageUsers : Screen("manage_users")
     object Profile : Screen("profile")
+    object EmployerApplicants : Screen("employer_applicants")
+    object EmployerJobs : Screen("employer_jobs")
+    object PendingJobs : Screen("pending_jobs")   // <-- ADD THIS LINE
 }
 
 @Composable
@@ -72,6 +85,15 @@ fun AppNavGraph(navController: NavHostController, viewModel: AppViewModel) {
         }
         composable(Screen.Profile.route) {
             ProfileScreen(navController, viewModel)
+        }
+        composable(Screen.EmployerApplicants.route) {
+            EmployerApplicantsScreen(navController, viewModel)
+        }
+        composable(Screen.EmployerJobs.route) {
+            JobListScreen(navController, viewModel)
+        }
+        composable(Screen.PendingJobs.route) {   // <-- ADD THIS COMPOSABLE
+            PendingJobsScreen(navController)
         }
     }
 }

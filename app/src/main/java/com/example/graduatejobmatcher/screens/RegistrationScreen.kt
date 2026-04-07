@@ -64,7 +64,9 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
                         unfocusedContainerColor = Color(0xFFE8E8E8),
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedIndicatorColor = Color.LightGray,
-                        cursorColor = Color.Black
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
             }
@@ -84,7 +86,9 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
                         unfocusedContainerColor = Color(0xFFE8E8E8),
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedIndicatorColor = Color.LightGray,
-                        cursorColor = Color.Black
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
             }
@@ -102,7 +106,7 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = null, tint = Color.Gray)
+                            Icon(imageVector = image, contentDescription = null, tint = Color.Black)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -112,7 +116,9 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
                         unfocusedContainerColor = Color(0xFFE8E8E8),
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedIndicatorColor = Color.LightGray,
-                        cursorColor = Color.Black
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
             }
@@ -134,7 +140,9 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
                         unfocusedContainerColor = Color(0xFFE8E8E8),
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedIndicatorColor = Color.LightGray,
-                        cursorColor = Color.Black
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
             }

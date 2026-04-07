@@ -1,4 +1,4 @@
-package com.example.graduatejobmatcher.screens
+package com.example.graduatejobmatcher.screens.admin
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,7 +22,9 @@ fun ManageUsersScreen(navController: NavController, viewModel: AppViewModel) {
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Manage Users") }) }) { paddingValues ->
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Manage Users") }) }
+    ) { paddingValues ->
         LazyColumn(
             modifier = Modifier.padding(paddingValues),
             contentPadding = PaddingValues(16.dp),
@@ -34,20 +36,17 @@ fun ManageUsersScreen(navController: NavController, viewModel: AppViewModel) {
                         Text("Name: ${user.name}")
                         Text("Email: ${user.email}")
                         Text("Role: ${user.role}")
-                        Row {
-                            if (user.role != "admin") {
-                                Button(
-                                    onClick = {
-                                        val newRole = if (user.role == "student") "employer" else "student"
-                                        viewModel.updateUserRole(user.userId, newRole)
-                                        users = users.map {
-                                            if (it.userId == user.userId) it.copy(role = newRole)
-                                            else it
-                                        }
+                        if (user.role != "admin") {
+                            Button(
+                                onClick = {
+                                    val newRole = if (user.role == "student") "employer" else "student"
+                                    viewModel.updateUserRole(user.userId, newRole)
+                                    users = users.map {
+                                        if (it.userId == user.userId) it.copy(role = newRole) else it
                                     }
-                                ) {
-                                    Text("Toggle Role")
                                 }
+                            ) {
+                                Text("Toggle Role")
                             }
                         }
                     }

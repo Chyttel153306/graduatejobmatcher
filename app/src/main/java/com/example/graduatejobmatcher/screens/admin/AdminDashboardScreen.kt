@@ -1,0 +1,188 @@
+package com.example.graduatejobmatcher.screens.admin
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.graduatejobmatcher.navigation.Screen
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdminDashboardScreen(navController: NavController) {
+    val primaryBlue = Color(0xFF3F51B5)
+    val backgroundColor = Color(0xFFF5F7FA)
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Admin Dashboard", color = Color.White, fontSize = 20.sp) },
+                navigationIcon = {
+                    IconButton(onClick = { /* Handle Menu */ }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { }) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 16.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color.LightGray)
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = primaryBlue)
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(backgroundColor),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            item {
+                Text(
+                    text = "Welcome back, Admin!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                Text(
+                    text = "Here's what's happening with the platform.",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Pending Jobs",
+                            count = "12",
+                            subtext = "Needs review",
+                            icon = Icons.Default.PendingActions,
+                            containerColor = Color(0xFFFFF9C4),
+                            iconColor = Color(0xFFFBC02D),
+                            onClick = { navController.navigate(Screen.PendingJobs.route) }
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Approved Jobs",
+                            count = "45",
+                            subtext = "Live on platform",
+                            icon = Icons.Default.CheckCircle,
+                            containerColor = Color(0xFFE8F5E9),
+                            iconColor = Color(0xFF4CAF50),
+                            onClick = { /* optional */ }
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Rejected",
+                            count = "8",
+                            subtext = "This month",
+                            icon = Icons.Default.Cancel,
+                            containerColor = Color(0xFFFFEBEE),
+                            iconColor = Color(0xFFF44336),
+                            onClick = { /* optional */ }
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Total Employers",
+                            count = "23",
+                            subtext = "Registered",
+                            icon = Icons.Default.Group,
+                            containerColor = Color(0xFFF3E5F5),
+                            iconColor = Color(0xFF9C27B0),
+                            onClick = { navController.navigate(Screen.ManageUsers.route) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    count: String,
+    subtext: String,
+    icon: ImageVector,
+    containerColor: Color,
+    iconColor: Color,
+    onClick: () -> Unit = {}
+) {
+    Card(
+        modifier = modifier
+            .height(140.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(28.dp)
+            )
+            Column {
+                Text(
+                    text = count,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black
+                )
+                Text(
+                    text = subtext,
+                    fontSize = 11.sp,
+                    color = Color.DarkGray
+                )
+            }
+        }
+    }
+}

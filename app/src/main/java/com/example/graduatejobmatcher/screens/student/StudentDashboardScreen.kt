@@ -1,4 +1,4 @@
-package com.example.graduatejobmatcher.screens
+package com.example.graduatejobmatcher.screens.student
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

@@ -130,6 +130,29 @@ class AppViewModel : ViewModel() {
         }
     }
 
+    // ---------- Employer-specific Methods (NEW) ----------
+    fun getJobsForEmployer(employerId: String, onResult: (List<Job>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val jobs = repo.getJobsForEmployer(employerId)
+                onResult(jobs)
+            } catch (e: Exception) {
+                onResult(emptyList())
+            }
+        }
+    }
+
+    fun getTotalApplicationsForEmployer(employerId: String, onResult: (Int) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val total = repo.getTotalApplicationsForEmployer(employerId)
+                onResult(total)
+            } catch (e: Exception) {
+                onResult(0)
+            }
+        }
+    }
+
     // ---------- Admin Methods ----------
     fun getAllUsers(onResult: (List<User>) -> Unit) {
         viewModelScope.launch {

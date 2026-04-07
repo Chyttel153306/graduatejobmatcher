@@ -1,9 +1,8 @@
-package com.example.graduatejobmatcher.screens
+package com.example.graduatejobmatcher.screens.employer
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,7 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,13 +19,33 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.graduatejobmatcher.model.Job
+import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @Composable
 fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewModel) {
     val primaryBlue = Color(0xFF3F51B5)
     val lightGrayBg = Color(0xFFF5F7FA)
+
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    // FIXED: Use name instead of company (company field doesn't exist)
+    val employerName = currentUser?.name ?: "Employer"
+
+    var activeJobs by remember { mutableStateOf<List<Job>>(emptyList()) }
+    var totalApplications by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        val employerId = viewModel.getCurrentUserId() ?: return@LaunchedEffect
+        viewModel.getJobsForEmployer(employerId) { jobs ->
+            activeJobs = jobs
+        }
+        viewModel.getTotalApplicationsForEmployer(employerId) { count ->
+            totalApplications = count
+        }
+    }
 
     Scaffold(
         bottomBar = { EmployerBottomNav(navController) },
@@ -38,9 +57,8 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // --- HEADER SECTION ---
+            // Header
             Box(modifier = Modifier.height(260.dp)) {
-                // Blue Background
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -61,7 +79,7 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                         )
                     }
                     Text(
-                        text = "Welcome ABC Corp",
+                        text = "Welcome $employerName",
                         color = Color.White,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
@@ -69,7 +87,7 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                     )
                 }
 
-                // --- OVERLAPPING STATS CARD ---
+                // Stats card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -87,13 +105,13 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            StatItem("Active Jobs", "12")
+                            StatItem("Active Jobs", "${activeJobs.size}")
                             VerticalDivider(modifier = Modifier.height(40.dp).width(1.dp))
-                            StatItem("Applications", "45")
+                            StatItem("Applications", "$totalApplications")
                         }
                         Spacer(modifier = Modifier.height(20.dp))
                         Button(
-                            onClick = { navController.navigate("post_job") },
+                            onClick = { navController.navigate(Screen.PostJob.route) },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             shape = RoundedCornerShape(24.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
@@ -106,20 +124,38 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- MENU CARDS ---
+            // View Applicants menu
             MenuSectionCard(
                 title = "View Applicants",
-                items = listOf("View Applicants", "Manage Listings"),
-                icon = Icons.Default.Person
+                items = listOf("Browse all job applicants"),
+                icon = Icons.Default.Person,
+                onClick = { navController.navigate(Screen.EmployerApplicants.route) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            MenuSectionCard(
-                title = "Manage Job Listings",
-                items = listOf("Software Intern", "Graphic Designer"),
-                icon = Icons.AutoMirrored.Filled.List
-            )
+            // Manage Job Listings
+            if (activeJobs.isNotEmpty()) {
+                MenuSectionCard(
+                    title = "Manage Job Listings",
+                    items = activeJobs.map { it.title },
+                    icon = Icons.AutoMirrored.Filled.List,
+                    onClick = { /* optional */ }
+                )
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Text(
+                        text = "No active jobs. Tap 'Post Job' to create one.",
+                        modifier = Modifier.padding(16.dp),
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
         }
@@ -135,7 +171,7 @@ fun StatItem(label: String, count: String) {
 }
 
 @Composable
-fun MenuSectionCard(title: String, items: List<String>, icon: ImageVector) {
+fun MenuSectionCard(title: String, items: List<String>, icon: ImageVector, onClick: () -> Unit = {}) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
         shape = RoundedCornerShape(12.dp),
@@ -148,7 +184,9 @@ fun MenuSectionCard(title: String, items: List<String>, icon: ImageVector) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                IconButton(onClick = onClick) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             items.forEach { item ->
@@ -172,25 +210,25 @@ fun EmployerBottomNav(navController: NavController) {
             icon = { Icon(Icons.Default.Home, null) },
             label = { Text("Home") },
             selected = true,
-            onClick = { /* Stay on dashboard */ }
+            onClick = { /* Already on dashboard */ }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.Search, null) },
-            label = { Text("View") },
+            label = { Text("Jobs") },
             selected = false,
-            onClick = { /* Navigate to job list or applicants */ }
+            onClick = { navController.navigate(Screen.EmployerJobs.route) }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.Email, null) },
             label = { Text("Apps") },
             selected = false,
-            onClick = { /* Navigate to applications */ }
+            onClick = { navController.navigate(Screen.EmployerApplicants.route) }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.AccountCircle, null) },
             label = { Text("Profile") },
             selected = false,
-            onClick = { navController.navigate("profile") }  // ✅ Connects to ProfileScreen
+            onClick = { navController.navigate(Screen.Profile.route) }
         )
     }
 }
