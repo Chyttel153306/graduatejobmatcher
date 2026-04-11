@@ -7,7 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,10 +19,12 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Job
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostJobScreen(navController: NavController, viewModel: AppViewModel) {
+
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var skills by remember { mutableStateOf("") }
@@ -31,43 +32,71 @@ fun PostJobScreen(navController: NavController, viewModel: AppViewModel) {
     var location by remember { mutableStateOf("") }
 
     val primaryBlue = Color(0xFF3F51B5)
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Post New Job", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Post New Job",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = primaryBlue)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = primaryBlue
+                )
             )
         },
+
         bottomBar = {
             Button(
                 onClick = {
-                    val job = Job(
-                        title = title,
-                        description = description,
-                        company = "Your Company", // Or get from viewModel
-                        location = location,
-                        employerId = viewModel.getCurrentUserId() ?: ""
-                    )
-                    viewModel.postJob(job)
-                    navController.popBackStack()
+
+                    scope.launch {
+
+                        val job = Job(
+                            title = title,
+                            description = description,
+                            company = "Your Company",
+                            location = location,
+                            employerId = viewModel.getCurrentUserId() ?: "",
+                            status = "pending"
+                        )
+
+                        viewModel.postJob(job)
+                        navController.popBackStack()
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
                     .height(56.dp),
                 shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = primaryBlue
+                )
             ) {
-                Text("Submit Job Post", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Submit Job Post",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
+
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -77,8 +106,12 @@ fun PostJobScreen(navController: NavController, viewModel: AppViewModel) {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Reusable field component to match the "Label above Field" style
-            PostJobField(label = "Job Title", value = title, onValueChange = { title = it })
+
+            PostJobField(
+                label = "Job Title",
+                value = title,
+                onValueChange = { title = it }
+            )
 
             PostJobField(
                 label = "Job Description",
@@ -88,18 +121,28 @@ fun PostJobScreen(navController: NavController, viewModel: AppViewModel) {
                 modifier = Modifier.height(120.dp)
             )
 
-            PostJobField(label = "Required Skills", value = skills, onValueChange = { skills = it })
+            PostJobField(
+                label = "Required Skills",
+                value = skills,
+                onValueChange = { skills = it }
+            )
 
-            PostJobField(label = "Salary", value = salary, onValueChange = { salary = it })
+            PostJobField(
+                label = "Salary",
+                value = salary,
+                onValueChange = { salary = it }
+            )
 
             PostJobField(
                 label = "Location",
                 value = location,
                 onValueChange = { location = it },
-                trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = null) }
+                trailingIcon = {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                }
             )
 
-            Spacer(modifier = Modifier.height(80.dp)) // Padding for the bottom button
+            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }
@@ -114,6 +157,7 @@ fun PostJobField(
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
+
         Text(
             text = label,
             fontWeight = FontWeight.Bold,
@@ -121,6 +165,7 @@ fun PostJobField(
             color = Color.Black,
             modifier = Modifier.padding(bottom = 8.dp)
         )
+
         TextField(
             value = value,
             onValueChange = onValueChange,

@@ -1,13 +1,12 @@
 package com.example.graduatejobmatcher.model
 
-import com.google.firebase.firestore.ServerTimestamp
 import java.util.*
 
 data class User(
     val userId: String = "",
     val name: String = "",
     val email: String = "",
-    val role: String = "" // "student", "employer", "admin"
+    val role: String = "" // student, employer, admin
 )
 
 data class Job(
@@ -16,14 +15,18 @@ data class Job(
     val description: String = "",
     val company: String = "",
     val location: String = "",
-    val postedDate: Date? = null, // Firebase timestamp
+    val jobType: String = "Full-time", // Full-time, Part-time, Internship, Remote
+    val status: String = "pending",    // pending, approved, rejected
+    val postedDate: Date? = null,
+    val deadline: Date? = null,
     val employerId: String = ""
 )
 
 data class Application(
     val applicationId: String = "",
     val jobId: String = "",
-    val studentId: String = "",
-    val status: String = "pending", // pending, accepted, rejected
+    val applicantId: String = "",      // renamed from studentId for consistency
+    val studentId: String = "",        // kept for backward compatibility
+    val status: String = "pending",    // pending, approved, rejected
     val appliedDate: Date? = null
 )

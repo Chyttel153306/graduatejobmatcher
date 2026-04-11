@@ -1,4 +1,4 @@
-package com.example.graduatejobmatcher.screens
+package com.example.graduatejobmatcher.commonscreen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

@@ -4,7 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.graduatejobmatcher.screens.*
+import com.example.graduatejobmatcher.commonscreen.JobDetailsScreen
+import com.example.graduatejobmatcher.commonscreen.LoginScreen
+import com.example.graduatejobmatcher.commonscreen.ProfileScreen
+import com.example.graduatejobmatcher.commonscreen.RegistrationScreen
 import com.example.graduatejobmatcher.screens.admin.AdminDashboardScreen
 import com.example.graduatejobmatcher.screens.admin.ManageUsersScreen
 import com.example.graduatejobmatcher.screens.admin.PendingJobsScreen
@@ -38,7 +41,7 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object EmployerApplicants : Screen("employer_applicants")
     object EmployerJobs : Screen("employer_jobs")
-    object PendingJobs : Screen("pending_jobs")   // <-- ADD THIS LINE
+    object PendingJobs : Screen("pending_jobs")
 }
 
 @Composable
@@ -92,8 +95,9 @@ fun AppNavGraph(navController: NavHostController, viewModel: AppViewModel) {
         composable(Screen.EmployerJobs.route) {
             JobListScreen(navController, viewModel)
         }
-        composable(Screen.PendingJobs.route) {   // <-- ADD THIS COMPOSABLE
-            PendingJobsScreen(navController)
+        composable(Screen.PendingJobs.route) {
+            // ✅ viewModel now passed so approve/reject/view all work
+            PendingJobsScreen(navController, viewModel)
         }
     }
 }
