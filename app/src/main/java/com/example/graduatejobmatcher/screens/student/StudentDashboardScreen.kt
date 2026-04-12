@@ -32,6 +32,16 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
     }
 
     var selectedItem by remember { mutableIntStateOf(0) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Filter jobs based on search query
+    val filteredJobs = remember(viewModel.jobs, searchQuery) {
+        if (searchQuery.isBlank()) viewModel.jobs
+        else viewModel.jobs.filter { job ->
+            job.title.contains(searchQuery, ignoreCase = true) ||
+                    job.company.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -40,10 +50,7 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                     icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                     label = { Text("Home") },
                     selected = selectedItem == 0,
-                    onClick = {
-                        selectedItem = 0
-                        // Already on dashboard – no navigation needed
-                    }
+                    onClick = { selectedItem = 0 }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Search, contentDescription = "Jobs") },
@@ -72,7 +79,7 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                 .padding(paddingValues)
                 .background(Color(0xFFF5F5F5))
         ) {
-            // --- BLUE HEADER SECTION ---
+            // Blue header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -108,12 +115,13 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                 }
             }
 
-            // --- MAIN CONTENT ---
+            // Main content
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Job Recommendations",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    color = Color.Black
                 )
                 Text(
                     text = "Job recommendation is alive",
@@ -123,10 +131,10 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // SEARCH BAR
+                // Search bar
                 OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
                     placeholder = { Text("Search Job") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     modifier = Modifier.fillMaxWidth(),
@@ -139,21 +147,23 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // JOB GRID
+                // Job grid – each card is fully clickable
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(viewModel.jobs) { job ->
+                    items(filteredJobs) { job ->
                         JobCard(
                             title = job.title,
                             company = job.company,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp),
-                            color = Color.White
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color.White,
+                            onClick = {
+                                // Use job.id (computed from jobId)
+                                navController.navigate("job_details/${job.id}")
+                            }
                         )
                     }
                 }

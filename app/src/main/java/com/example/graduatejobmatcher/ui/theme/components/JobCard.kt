@@ -1,6 +1,7 @@
 package com.example.graduatejobmatcher.ui.theme.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,11 +18,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun JobCard(title: String, company: String, modifier: Modifier, color: Color) {
+fun JobCard(
+    title: String,
+    company: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color(0xFF3F51B5), // default brand color
+    onClick: () -> Unit = {}          // ← NEW: click handler
+) {
     Card(
         modifier = modifier
-            .width(160.dp) // Set a standard width for the dashboard cards
-            .height(180.dp), // Increased height to fit all elements
+            .clickable(onClick = onClick)   // ← make card clickable
+            .height(180.dp),                // keep fixed height, width will come from parent (grid)
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -32,7 +39,7 @@ fun JobCard(title: String, company: String, modifier: Modifier, color: Color) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Row: Logo and Overflow Menu
+            // Top row: logo + overflow menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -45,7 +52,6 @@ fun JobCard(title: String, company: String, modifier: Modifier, color: Color) {
                         .background(color),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Placeholder for the "CJM" text/logo seen in the image
                     Text(
                         text = "CJM",
                         color = Color.White,
@@ -62,7 +68,7 @@ fun JobCard(title: String, company: String, modifier: Modifier, color: Color) {
                 )
             }
 
-            // Middle Section: Title and Company
+            // Middle: title + company
             Column(modifier = Modifier.padding(top = 8.dp)) {
                 Text(
                     text = title,
@@ -82,7 +88,7 @@ fun JobCard(title: String, company: String, modifier: Modifier, color: Color) {
                 )
             }
 
-            // Bottom Section: Time ago
+            // Bottom: timestamp (static for now)
             Text(
                 text = "17 days ago",
                 fontSize = 12.sp,

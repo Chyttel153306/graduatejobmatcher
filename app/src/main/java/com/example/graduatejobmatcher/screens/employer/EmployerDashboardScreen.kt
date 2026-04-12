@@ -116,7 +116,7 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                             shape = RoundedCornerShape(24.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
                         ) {
-                            Text("Post Job", fontWeight = FontWeight.Bold)
+                            Text("Post Job", fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }

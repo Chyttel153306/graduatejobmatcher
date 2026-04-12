@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Job
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +28,7 @@ fun PostJobScreen(navController: NavController, viewModel: AppViewModel) {
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var skills by remember { mutableStateOf("") }
+    var skillsInput by remember { mutableStateOf("") }  // comma-separated string
     var salary by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
 
@@ -58,45 +59,59 @@ fun PostJobScreen(navController: NavController, viewModel: AppViewModel) {
                 )
             )
         },
-
         bottomBar = {
-            Button(
-                onClick = {
-
-                    scope.launch {
-
-                        val job = Job(
-                            title = title,
-                            description = description,
-                            company = "Your Company",
-                            location = location,
-                            employerId = viewModel.getCurrentUserId() ?: "",
-                            status = "pending"
-                        )
-
-                        viewModel.postJob(job)
-                        navController.popBackStack()
-                    }
-                },
+            // ✅ White background for the whole bottom bar area
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color.White)
                     .padding(16.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = primaryBlue
-                )
             ) {
-                Text(
-                    "Submit Job Post",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Button(
+                    onClick = {
+                        scope.launch {
+                            // Convert comma-separated skills string to List<String>
+                            val skillsList = skillsInput.split(",")
+                                .map { it.trim() }
+                                .filter { it.isNotEmpty() }
+
+                            val job = Job(
+                                jobId = "",          // Firestore will auto-generate
+                                title = title,
+                                description = description,
+                                company = viewModel.currentUser.value?.name ?: "Your Company",
+                                location = location,
+                                salary = salary,
+                                requiredSkills = skillsList,
+                                jobType = "Full-time",   // default, can be extended
+                                status = "pending",
+                                postedDate = Date(),
+                                deadline = null,
+                                employerId = viewModel.getCurrentUserId() ?: ""
+                            )
+
+                            viewModel.postJob(job)
+                            navController.popBackStack()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primaryBlue
+                    )
+                ) {
+                    Text(
+                        "Submit Job Post",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White   // ✅ explicit white text
+                    )
+                }
             }
         }
-
     ) { paddingValues ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -106,7 +121,6 @@ fun PostJobScreen(navController: NavController, viewModel: AppViewModel) {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
             PostJobField(
                 label = "Job Title",
                 value = title,
@@ -122,9 +136,9 @@ fun PostJobScreen(navController: NavController, viewModel: AppViewModel) {
             )
 
             PostJobField(
-                label = "Required Skills",
-                value = skills,
-                onValueChange = { skills = it }
+                label = "Required Skills (comma-separated)",
+                value = skillsInput,
+                onValueChange = { skillsInput = it }
             )
 
             PostJobField(
@@ -157,7 +171,6 @@ fun PostJobField(
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-
         Text(
             text = label,
             fontWeight = FontWeight.Bold,

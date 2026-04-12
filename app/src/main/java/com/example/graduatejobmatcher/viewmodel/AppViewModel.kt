@@ -12,24 +12,25 @@ import com.example.graduatejobmatcher.model.*
 class AppViewModel : ViewModel() {
 
     private val repo = FirebaseRepository()
-
     var jobs = mutableStateListOf<Job>()
-
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser
 
     // ---------- Auth ----------
-
     fun register(
         name: String,
         email: String,
         password: String,
         role: String,
+        degree: String = "",
+        institution: String = "",
+        graduationDate: String = "",
+        skills: List<String> = emptyList(),
         onResult: (Boolean, String) -> Unit
     ) {
         viewModelScope.launch {
             try {
-                repo.register(name, email, password, role)
+                repo.register(name, email, password, role, degree, institution, graduationDate, skills)
                 onResult(true, "")
             } catch (e: Exception) {
                 onResult(false, e.message ?: "Registration failed")
@@ -37,11 +38,7 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    fun login(
-        email: String,
-        password: String,
-        callback: (Boolean, String, String) -> Unit
-    ) {
+    fun login(email: String, password: String, callback: (Boolean, String, String) -> Unit) {
         viewModelScope.launch {
             try {
                 val user = repo.login(email, password)
@@ -53,12 +50,8 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    suspend fun fetchCurrentUser() {
-        _currentUser.value = repo.getCurrentUser()
-    }
-
+    suspend fun fetchCurrentUser() { _currentUser.value = repo.getCurrentUser() }
     fun getCurrentUserId(): String? = _currentUser.value?.userId
-
     fun logout() {
         viewModelScope.launch {
             repo.logout()
@@ -68,196 +61,98 @@ class AppViewModel : ViewModel() {
     }
 
     // ---------- Job Methods ----------
-
     fun loadJobs() {
         viewModelScope.launch {
             try {
                 jobs.clear()
                 jobs.addAll(repo.getJobs())
-            } catch (e: Exception) {
-                // log if needed
-            }
+            } catch (_: Exception) { }
         }
     }
 
     fun postJob(job: Job) {
         viewModelScope.launch {
-            try {
-                repo.postJob(job)
-                loadJobs()
-            } catch (e: Exception) {
-                // log if needed
-            }
+            repo.postJob(job)
+            loadJobs()
         }
     }
 
     fun getApprovedJobs(onResult: (List<Job>) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val jobs = repo.getApprovedJobs()
-                onResult(jobs)
-            } catch (e: Exception) {
-                onResult(emptyList())
-            }
-        }
+        viewModelScope.launch { onResult(repo.getApprovedJobs()) }
     }
 
     fun getJobsForEmployer(employerId: String, onResult: (List<Job>) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val jobs = repo.getJobsForEmployer(employerId)
-                onResult(jobs)
-            } catch (e: Exception) {
-                onResult(emptyList())
-            }
-        }
+        viewModelScope.launch { onResult(repo.getJobsForEmployer(employerId)) }
     }
 
     fun getTotalApplicationsForEmployer(employerId: String, onResult: (Int) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val total = repo.getTotalApplicationsForEmployer(employerId)
-                onResult(total)
-            } catch (e: Exception) {
-                onResult(0)
-            }
-        }
+        viewModelScope.launch { onResult(repo.getTotalApplicationsForEmployer(employerId)) }
+    }
+
+    fun getJobById(jobId: String, onResult: (Job?) -> Unit) {
+        viewModelScope.launch { onResult(repo.getJobById(jobId)) }
     }
 
     // ---------- Application Methods ----------
-
     fun applyJob(application: Application) {
-        viewModelScope.launch {
-            try {
-                repo.applyJob(application)
-            } catch (e: Exception) {
-                // log if needed
-            }
-        }
+        viewModelScope.launch { repo.applyJob(application) }
     }
 
     fun getApplicationsForJob(jobId: String, onResult: (List<Application>) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val apps = repo.getApplicationsForJob(jobId)
-                onResult(apps)
-            } catch (e: Exception) {
-                onResult(emptyList())
-            }
-        }
+        viewModelScope.launch { onResult(repo.getApplicationsForJob(jobId)) }
     }
 
     fun getApplicationsForApplicant(applicantId: String, onResult: (List<Application>) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val apps = repo.getApplicationsForApplicant(applicantId)
-                onResult(apps)
-            } catch (e: Exception) {
-                onResult(emptyList())
-            }
-        }
+        viewModelScope.launch { onResult(repo.getApplicationsForApplicant(applicantId)) }
+    }
+
+    fun getApplicationById(applicationId: String, onResult: (Application?) -> Unit) {
+        viewModelScope.launch { onResult(repo.getApplicationById(applicationId)) }
     }
 
     fun updateApplicationStatus(applicationId: String, newStatus: String) {
-        viewModelScope.launch {
-            try {
-                repo.updateApplicationStatus(applicationId, newStatus)
-            } catch (e: Exception) {
-                // log if needed
-            }
-        }
+        viewModelScope.launch { repo.updateApplicationStatus(applicationId, newStatus) }
     }
 
-    // ---------- Admin: Job Moderation ----------
-
+    // ---------- Admin ----------
     fun getPendingJobs(onResult: (List<Job>) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val jobs = repo.getPendingJobs()
-                onResult(jobs)
-            } catch (e: Exception) {
-                onResult(emptyList())
-            }
-        }
+        viewModelScope.launch { onResult(repo.getPendingJobs()) }
     }
 
     fun updateJobStatus(jobId: String, status: String, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
-            try {
-                repo.updateJobStatus(jobId, status)
-                onComplete()
-            } catch (e: Exception) {
-                onComplete()
-            }
+            repo.updateJobStatus(jobId, status)
+            onComplete()
         }
     }
 
-    // ---------- Admin: Dashboard Stats ----------
-
     fun getPendingJobsCount(onResult: (Int) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val count = repo.getPendingJobs().size
-                onResult(count)
-            } catch (e: Exception) {
-                onResult(0)
-            }
-        }
+        viewModelScope.launch { onResult(repo.getPendingJobs().size) }
     }
 
     fun getApprovedJobsCount(onResult: (Int) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val count = repo.getApprovedJobs().size
-                onResult(count)
-            } catch (e: Exception) {
-                onResult(0)
-            }
-        }
+        viewModelScope.launch { onResult(repo.getApprovedJobs().size) }
     }
 
     fun getRejectedJobsCount(onResult: (Int) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val count = repo.getRejectedJobs().size
-                onResult(count)
-            } catch (e: Exception) {
-                onResult(0)
-            }
-        }
+        viewModelScope.launch { onResult(repo.getRejectedJobs().size) }
     }
 
     fun getTotalEmployersCount(onResult: (Int) -> Unit) {
         viewModelScope.launch {
-            try {
-                val count = repo.getAllUsers().count { it.role == "employer" }
-                onResult(count)
-            } catch (e: Exception) {
-                onResult(0)
-            }
+            onResult(repo.getAllUsers().count { it.role == "employer" })
         }
     }
 
-    // ---------- Admin: User Management ----------
-
     fun getAllUsers(onResult: (List<User>) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val users = repo.getAllUsers()
-                onResult(users)
-            } catch (e: Exception) {
-                onResult(emptyList())
-            }
-        }
+        viewModelScope.launch { onResult(repo.getAllUsers()) }
+    }
+
+    fun getUserById(userId: String, onResult: (User?) -> Unit) {
+        viewModelScope.launch { onResult(repo.getUserById(userId)) }
     }
 
     fun updateUserRole(userId: String, newRole: String) {
-        viewModelScope.launch {
-            try {
-                repo.updateUserRole(userId, newRole)
-            } catch (e: Exception) {
-                // log if needed
-            }
-        }
+        viewModelScope.launch { repo.updateUserRole(userId, newRole) }
     }
 }

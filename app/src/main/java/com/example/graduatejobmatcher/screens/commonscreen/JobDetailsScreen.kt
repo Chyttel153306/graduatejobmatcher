@@ -1,4 +1,4 @@
-package com.example.graduatejobmatcher.commonscreen
+package com.example.graduatejobmatcher.screens.commonscreen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -27,6 +27,7 @@ fun JobDetailsScreen(
     viewModel: AppViewModel,
     jobId: String
 ) {
+    // Find job from the ViewModel's live data (real data)
     val job = viewModel.jobs.find { it.jobId == jobId }
     val primaryBlue = Color(0xFF3F51B5)
 
@@ -39,16 +40,28 @@ fun JobDetailsScreen(
 
     Scaffold(
         bottomBar = {
-            Button(
-                onClick = { navController.navigate("apply_job/${job.jobId}") },
+            // White background for bottom bar
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color.White)
                     .padding(16.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
             ) {
-                Text("Apply Now", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = { navController.navigate("apply_job/${job.jobId}") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
+                ) {
+                    Text(
+                        text = "Apply Now",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White   // white text on blue button
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -59,13 +72,12 @@ fun JobDetailsScreen(
                 .verticalScroll(rememberScrollState())
                 .background(Color.White)
         ) {
-            // --- HERO HEADER & OVERLAPPING LOGO ---
+            // Hero header with overlapping logo
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
             ) {
-                // Grey Top Area
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -80,7 +92,6 @@ fun JobDetailsScreen(
                     }
                 }
 
-                // Company Logo Card (Floating)
                 Card(
                     modifier = Modifier
                         .size(100.dp)
@@ -90,15 +101,19 @@ fun JobDetailsScreen(
                     elevation = CardDefaults.cardElevation(4.dp)
                 ) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        // Logo Placeholder
-                        Text(job.company.take(1), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = primaryBlue)
+                        Text(
+                            text = job.company.take(1).uppercase(),
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = primaryBlue
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- JOB HEADER INFO ---
+            // Job title & info row
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -111,34 +126,65 @@ fun JobDetailsScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                InfoRow(icon = Icons.Default.LocationOn, text = job.location)
+                // Location – black text
+                InfoRow(
+                    icon = Icons.Default.LocationOn,
+                    text = job.location.ifBlank { "Location not specified" },
+                    textColor = Color.Black
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                // Assuming salary exists in your model, or use placeholder
-                InfoRow(icon = Icons.Default.MonetizationOn, text = "$155,000 - $185,000")
+
+                // Salary – real field from job
+                InfoRow(
+                    icon = Icons.Default.MonetizationOn,
+                    text = job.salary.ifBlank { "Salary not specified" },
+                    textColor = Color.Black
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- DESCRIPTION SECTION ---
+            // Job description
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                Text("Job Description", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(
+                    text = "Job Description",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color.Black
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = job.description,
-                    color = Color.DarkGray,
+                    text = job.description.ifBlank { "No description provided." },
+                    color = Color.Black,
                     lineHeight = 22.sp
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // --- SKILLS SECTION ---
-                Text("Required Skills", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                // Required skills – real list from job
+                Text(
+                    text = "Required Skills",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color.Black
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Placeholder skills - you can link this to your model later
-                    DetailSkillChip("Python")
-                    DetailSkillChip("SQL")
-                    DetailSkillChip("Java")
+
+                if (job.requiredSkills.isEmpty()) {
+                    Text(
+                        text = "No specific skills listed.",
+                        color = Color.Black,
+                        fontSize = 14.sp
+                    )
+                } else {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        job.requiredSkills.forEach { skill ->
+                            DetailSkillChip(skill)
+                        }
+                    }
                 }
             }
 
@@ -148,18 +194,18 @@ fun JobDetailsScreen(
 }
 
 @Composable
-fun InfoRow(icon: ImageVector, text: String) {
+fun InfoRow(icon: ImageVector, text: String, textColor: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray)
         Spacer(modifier = Modifier.width(6.dp))
-        Text(text = text, color = Color.Gray, fontSize = 14.sp)
+        Text(text = text, color = textColor, fontSize = 14.sp)
     }
 }
 
 @Composable
 fun DetailSkillChip(label: String) {
     Surface(
-        color = Color(0xFFE8EAF6), // Light blue-grey
+        color = Color(0xFFE8EAF6),
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(
