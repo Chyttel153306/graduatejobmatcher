@@ -10,13 +10,20 @@ import com.example.graduatejobmatcher.ui.theme.GraduateJobMatcherTheme
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
-            GraduateJobMatcherTheme {   // <-- matches theme function now
+            GraduateJobMatcherTheme {
+
                 val navController = rememberNavController()
                 val viewModel: AppViewModel = viewModel()
-                AppNavGraph(navController = navController, viewModel = viewModel)
+
+                AppNavGraph(
+                    navController = navController,
+                    viewModel = viewModel
+                )
             }
         }
     }

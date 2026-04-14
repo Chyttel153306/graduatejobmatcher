@@ -31,7 +31,6 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
     val lightGrayBg = Color(0xFFF5F7FA)
 
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-    // FIXED: Use name instead of company (company field doesn't exist)
     val employerName = currentUser?.name ?: "Employer"
 
     var activeJobs by remember { mutableStateOf<List<Job>>(emptyList()) }
@@ -57,7 +56,6 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header
             Box(modifier = Modifier.height(260.dp)) {
                 Box(
                     modifier = Modifier
@@ -78,16 +76,18 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                             tint = Color.White
                         )
                     }
+
                     Text(
                         text = "Welcome $employerName",
                         color = Color.White,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.align(Alignment.CenterStart).padding(bottom = 40.dp)
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(bottom = 40.dp)
                     )
                 }
 
-                // Stats card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -109,10 +109,14 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                             VerticalDivider(modifier = Modifier.height(40.dp).width(1.dp))
                             StatItem("Applications", "$totalApplications")
                         }
+
                         Spacer(modifier = Modifier.height(20.dp))
+
                         Button(
                             onClick = { navController.navigate(Screen.PostJob.route) },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
                             shape = RoundedCornerShape(24.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
                         ) {
@@ -124,7 +128,6 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // View Applicants menu
             MenuSectionCard(
                 title = "View Applicants",
                 items = listOf("Browse all job applicants"),
@@ -134,7 +137,6 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Manage Job Listings
             if (activeJobs.isNotEmpty()) {
                 MenuSectionCard(
                     title = "Manage Job Listings",
@@ -144,7 +146,9 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                 )
             } else {
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
@@ -166,14 +170,26 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
 fun StatItem(label: String, count: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, fontSize = 14.sp, color = Color.Gray)
-        Text(text = count, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+        Text(
+            text = count,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color.Black
+        )
     }
 }
 
 @Composable
-fun MenuSectionCard(title: String, items: List<String>, icon: ImageVector, onClick: () -> Unit = {}) {
+fun MenuSectionCard(
+    title: String,
+    items: List<String>,
+    icon: ImageVector,
+    onClick: () -> Unit = {}
+) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
@@ -185,16 +201,26 @@ fun MenuSectionCard(title: String, items: List<String>, icon: ImageVector, onCli
             ) {
                 Text(text = title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 IconButton(onClick = onClick) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null
+                    )
                 }
             }
+
             Spacer(modifier = Modifier.height(8.dp))
+
             items.forEach { item ->
                 Row(
                     modifier = Modifier.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.Gray
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = item, fontSize = 14.sp, color = Color.DarkGray)
                 }
@@ -211,18 +237,6 @@ fun EmployerBottomNav(navController: NavController) {
             label = { Text("Home") },
             selected = true,
             onClick = { /* Already on dashboard */ }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Search, null) },
-            label = { Text("Jobs") },
-            selected = false,
-            onClick = { navController.navigate(Screen.EmployerJobs.route) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Email, null) },
-            label = { Text("Apps") },
-            selected = false,
-            onClick = { navController.navigate(Screen.EmployerApplicants.route) }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.AccountCircle, null) },

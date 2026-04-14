@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,9 +21,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Job
+import com.example.graduatejobmatcher.model.User
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
-// --- LOCAL DATA MODEL (renamed to avoid conflict with existing Applicant in other files) ---
+// FIX: Use a function so Locale is resolved at call time, not captured at class-load time
+private fun dateFormatter() = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+
 data class ApplicantItem(
     val applicationId: String,
     val studentId: String,
@@ -32,7 +36,8 @@ data class ApplicantItem(
     val statusBadge: String,
     val university: String,
     val skills: List<String>,
-    val degree: String
+    val degree: String,
+    val appliedDate: String
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +46,7 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
     var jobs by remember { mutableStateOf<List<Job>>(emptyList()) }
     var selectedJob by remember { mutableStateOf<Job?>(null) }
     var applicants by remember { mutableStateOf<List<ApplicantItem>>(emptyList()) }
+    var isLoadingApplicants by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
     val employerId = viewModel.getCurrentUserId() ?: ""
@@ -48,67 +54,103 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
     val primaryBlue = Color(0xFF3B69E4)
     val backgroundColor = Color(0xFFF7F8FA)
 
-    // --- FETCH DATA LOGIC ---
     LaunchedEffect(employerId) {
         viewModel.getJobsForEmployer(employerId) { jobList ->
             jobs = jobList
-            if (jobList.isNotEmpty() && selectedJob == null) {
+            if (selectedJob == null && jobList.isNotEmpty()) {
                 selectedJob = jobList.first()
             }
         }
     }
 
     LaunchedEffect(selectedJob) {
-        selectedJob?.let { job ->
-            viewModel.getApplicationsForJob(job.jobId) { applications ->
-                applicants = applications.map { app ->
-                    ApplicantItem(
+        val job = selectedJob ?: return@LaunchedEffect
+        isLoadingApplicants = true
+        applicants = emptyList()
+
+        viewModel.getApplicationsForJob(job.jobId) { applications ->
+            if (applications.isEmpty()) {
+                isLoadingApplicants = false
+                return@getApplicationsForJob
+            }
+
+            val enriched = mutableListOf<ApplicantItem>()
+            var pending = applications.size
+
+            applications.forEach { app ->
+                viewModel.getUserById(app.studentId) { user: User? ->
+                    val item = ApplicantItem(
                         applicationId = app.applicationId,
-                        studentId = app.studentId,
-                        name = "Student ${app.studentId.take(4)}",
-                        statusBadge = when (app.status) {
-                            "pending" -> "New"
+                        studentId     = app.studentId,
+                        name          = user?.name?.takeIf { it.isNotBlank() } ?: "Unknown Applicant",
+                        statusBadge   = when (app.status.lowercase()) {
                             "accepted" -> "Shortlisted"
                             "rejected" -> "Rejected"
                             else -> "New"
                         },
-                        university = "Cebu Technological University",
-                        skills = listOf("Kotlin", "Java", "Firebase", "SQL"),
-                        degree = "BS Information Technology"
+                        university    = user?.institution?.takeIf { it.isNotBlank() } ?: "Institution not set",
+                        skills        = user?.skills ?: emptyList(),
+                        degree        = user?.degree?.takeIf { it.isNotBlank() } ?: "Degree not set",
+                        appliedDate   = app.appliedDate?.let { dateFormatter().format(it) } ?: "—"
                     )
+                    enriched.add(item)
+                    pending--
+                    if (pending == 0) {
+                        applicants = enriched.sortedByDescending { it.appliedDate }
+                        isLoadingApplicants = false
+                    }
                 }
             }
         }
     }
 
-    val filteredApplicants = remember(searchQuery, applicants) {
-        if (searchQuery.isBlank()) applicants
-        else applicants.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    val displayedApplicants = remember(searchQuery, selectedFilter, applicants) {
+        applicants
+            .filter { a ->
+                when (selectedFilter) {
+                    "New" -> a.statusBadge == "New"
+                    "Shortlisted" -> a.statusBadge == "Shortlisted"
+                    "Rejected" -> a.statusBadge == "Rejected"
+                    else -> true
+                }
+            }
+            .filter { a ->
+                searchQuery.isBlank() ||
+                        a.name.contains(searchQuery, ignoreCase = true) ||
+                        a.degree.contains(searchQuery, ignoreCase = true) ||
+                        a.university.contains(searchQuery, ignoreCase = true) ||
+                        a.skills.any { it.contains(searchQuery, ignoreCase = true) }
+            }
     }
 
+    val countNew         = applicants.count { it.statusBadge == "New" }
+    val countShortlisted = applicants.count { it.statusBadge == "Shortlisted" }
+    val countRejected    = applicants.count { it.statusBadge == "Rejected" }
+
     val badgeColors = mapOf(
-        "New" to Color(0xFF4CAF50),
+        "New"         to Color(0xFF4CAF50),
         "Shortlisted" to Color(0xFFFF9800),
-        "Rejected" to Color(0xFFF44336)
+        "Rejected"    to Color(0xFFF44336)
     )
 
-    // --- UI LAYOUT ---
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Applicants", color = Color.White, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
                     }
                 },
                 actions = {
                     Box(modifier = Modifier.padding(end = 12.dp)) {
-                        Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White)
+                        Icon(Icons.Default.Notifications, null, tint = Color.White)
                         Surface(
                             color = Color.Red,
                             shape = CircleShape,
-                            modifier = Modifier.size(10.dp).align(Alignment.TopEnd)
+                            modifier = Modifier
+                                .size(10.dp)
+                                .align(Alignment.TopEnd)
                         ) {}
                     }
                 },
@@ -122,33 +164,49 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
                 .padding(paddingValues)
                 .background(backgroundColor)
         ) {
-            if (selectedJob != null) {
-                // 1. Job Details Card
+            selectedJob?.let { job ->
+
                 Card(
                     modifier = Modifier.padding(16.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Surface(
                             modifier = Modifier.size(48.dp),
                             color = Color(0xFFE8EFFF),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Icon(Icons.Default.BusinessCenter, null, tint = primaryBlue, modifier = Modifier.padding(10.dp))
+                            Icon(
+                                Icons.Default.BusinessCenter, null,
+                                tint = primaryBlue,
+                                modifier = Modifier.padding(10.dp)
+                            )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(Modifier.width(12.dp))
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(selectedJob!!.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                StatusLabel("Active", Color(0xFF4CAF50))
+                                Text(job.title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
+                                Spacer(Modifier.width(8.dp))
+                                StatusLabel(
+                                    text  = job.status.replaceFirstChar { it.uppercase() },
+                                    color = if (job.status == "active") Color(0xFF4CAF50) else Color(0xFFFF9800)
+                                )
                             }
-                            Text(selectedJob!!.company ?: "TechCorp Inc.", color = Color.Gray, fontSize = 14.sp)
-                            Row(modifier = Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(job.company.ifBlank { "Company not set" }, color = Color.Gray, fontSize = 14.sp)
+                            Row(
+                                modifier = Modifier.padding(top = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Icon(Icons.Default.DateRange, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                                Text(" Posted May 20, 2024", fontSize = 12.sp, color = Color.Gray)
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    " Posted ${job.postedDate?.let { dateFormatter().format(it) } ?: "—"}",
+                                    fontSize = 12.sp, color = Color.Gray
+                                )
+                                Spacer(Modifier.width(12.dp))
                                 Icon(Icons.Default.People, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
                                 Text(" ${applicants.size} Applicants", fontSize = 12.sp, color = Color.Gray)
                             }
@@ -156,128 +214,247 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
                     }
                 }
 
-                // 2. Search Bar
+                if (jobs.size > 1) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
+                        items(jobs) { j ->
+                            FilterChip(
+                                selected = j.jobId == job.jobId,
+                                onClick  = { selectedJob = j },
+                                label    = {
+                                    Text(
+                                        j.title,
+                                        color = if (j.jobId == job.jobId) Color.White else Color.Black,
+                                        fontSize = 12.sp
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = primaryBlue,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    placeholder = { Text("Search applicants...", fontSize = 14.sp) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    placeholder = { Text("Search by name, skill, degree…", fontSize = 14.sp, color = Color.Gray) },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = Color(0xFFEEF1F6),
-                        focusedContainerColor = Color(0xFFEEF1F6),
-                        unfocusedBorderColor = Color.Transparent
+                        focusedContainerColor   = Color(0xFFEEF1F6),
+                        unfocusedBorderColor    = Color.Transparent,
+                        focusedBorderColor      = primaryBlue,
+                        focusedTextColor        = Color.Black,
+                        unfocusedTextColor      = Color.Black
                     ),
                     singleLine = true
                 )
 
-                // 3. Filter Row
-                val filterOptions = listOf("All (${applicants.size})", "New (12)", "Shortlisted (8)", "Rejected (5)")
+                val filterOptions = listOf(
+                    "All"         to applicants.size,
+                    "New"         to countNew,
+                    "Shortlisted" to countShortlisted,
+                    "Rejected"    to countRejected
+                )
                 LazyRow(
-                    modifier = Modifier.padding(vertical = 16.dp),
+                    modifier = Modifier.padding(vertical = 12.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filterOptions) { filter ->
+                    items(filterOptions) { (label, count) ->
+                        val isSelected = selectedFilter == label
                         FilterChip(
-                            selected = selectedFilter == filter,
-                            onClick = { selectedFilter = filter },
-                            label = { Text(filter) },
+                            selected = isSelected,
+                            onClick  = { selectedFilter = label },
+                            label    = {
+                                Text(
+                                    "$label ($count)",
+                                    color = if (isSelected) Color.White else Color.Black
+                                )
+                            },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = primaryBlue,
-                                selectedLabelColor = Color.White
+                                selectedLabelColor     = Color.White
                             )
                         )
                     }
                 }
 
-                // 4. Applicants List (using renamed composable)
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(filteredApplicants) { applicant ->
-                        EmployerApplicantCard(
-                            applicant = applicant,
-                            badgeColor = badgeColors[applicant.statusBadge] ?: Color.Gray,
-                            onViewProfile = { navController.navigate("student_profile/${applicant.studentId}") },
-                            onReview = {
-                                viewModel.updateApplicationStatus(applicant.applicationId, "accepted")
-                            }
-                        )
+                when {
+                    isLoadingApplicants -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = primaryBlue)
+                        }
                     }
+                    displayedApplicants.isEmpty() -> {
+                        Box(
+                            Modifier.fillMaxSize().padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                if (applicants.isEmpty()) "No applications yet for this job."
+                                else "No applicants match your search.",
+                                color = Color.Gray, fontSize = 14.sp
+                            )
+                        }
+                    }
+                    else -> {
+                        LazyColumn(Modifier.fillMaxSize()) {
+                            items(
+                                items = displayedApplicants,
+                                key   = { it.applicationId }
+                            ) { applicant ->
+                                EmployerApplicantCard(
+                                    applicant     = applicant,
+                                    badgeColor    = badgeColors[applicant.statusBadge] ?: Color.Gray,
+                                    // ── CONNECTED: tapping "Profile" navigates to ApplicantDetailsScreen ──
+                                    onViewProfile = {
+                                        navController.navigate(
+                                            "applicant_details/${applicant.applicationId}"
+                                        )
+                                    },
+                                    onShortlist = {
+                                        viewModel.updateApplicationStatus(applicant.applicationId, "accepted")
+                                        applicants = applicants.map {
+                                            if (it.applicationId == applicant.applicationId)
+                                                it.copy(statusBadge = "Shortlisted")
+                                            else it
+                                        }
+                                    },
+                                    onReject = {
+                                        viewModel.updateApplicationStatus(applicant.applicationId, "rejected")
+                                        applicants = applicants.map {
+                                            if (it.applicationId == applicant.applicationId)
+                                                it.copy(statusBadge = "Rejected")
+                                            else it
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (jobs.isEmpty() && !isLoadingApplicants) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("You have not posted any jobs yet.", color = Color.Gray)
                 }
             }
         }
     }
 }
 
-// --- SUB-COMPONENTS (renamed to avoid conflicts) ---
-
 @Composable
-fun EmployerApplicantCard(applicant: ApplicantItem, badgeColor: Color, onViewProfile: () -> Unit, onReview: () -> Unit) {
+fun EmployerApplicantCard(
+    applicant    : ApplicantItem,
+    badgeColor   : Color,
+    onViewProfile: () -> Unit,
+    onShortlist  : () -> Unit,
+    onReject     : () -> Unit
+) {
+    val primaryBlue = Color(0xFF3B69E4)
+
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp)
+        shape  = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+
             Row {
-                Surface(modifier = Modifier.size(50.dp), shape = CircleShape, color = Color.LightGray) {}
-                Spacer(modifier = Modifier.width(12.dp))
+                Surface(
+                    modifier = Modifier.size(50.dp),
+                    shape = CircleShape,
+                    color = Color(0xFFE8EFFF)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text       = applicant.name.firstOrNull()?.uppercase() ?: "?",
+                            color      = primaryBlue,
+                            fontWeight = FontWeight.Bold,
+                            fontSize   = 20.sp
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(applicant.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(applicant.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
+                        Spacer(Modifier.width(8.dp))
                         StatusLabel(applicant.statusBadge, badgeColor)
                     }
-                    Text(applicant.degree, fontSize = 13.sp, color = Color.DarkGray)
+                    Text(applicant.degree,     fontSize = 13.sp, color = Color.DarkGray)
                     Text(applicant.university, fontSize = 12.sp, color = Color.Gray)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Applied", fontSize = 10.sp, color = Color.Gray)
-                    Text("May 28, 2024", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text("Applied",             fontSize = 10.sp, color = Color.Gray)
+                    Text(applicant.appliedDate, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.Black)
                 }
             }
 
-            Row(modifier = Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Skills:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                applicant.skills.take(3).forEach { skill ->
-                    EmployerSkillChip(skill)
-                    Spacer(modifier = Modifier.width(4.dp))
+            if (applicant.skills.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Skills:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+                    Spacer(Modifier.width(8.dp))
+                    applicant.skills.take(3).forEach { skill ->
+                        EmployerSkillChip(skill)
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    if (applicant.skills.size > 3) {
+                        EmployerSkillChip("+${applicant.skills.size - 3}")
+                    }
                 }
-                if (applicant.skills.size > 3) {
-                    EmployerSkillChip("+${applicant.skills.size - 3}")
-                }
+            } else {
+                Spacer(Modifier.height(12.dp))
             }
 
             Row {
                 Button(
-                    onClick = onViewProfile,
+                    onClick  = onViewProfile,
                     modifier = Modifier.weight(1f).height(40.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEF1F6)),
-                    shape = RoundedCornerShape(8.dp)
+                    colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEF1F6)),
+                    shape    = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Visibility, null, modifier = Modifier.size(16.dp), tint = Color(0xFF3B69E4))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("View Profile", color = Color(0xFF3B69E4), fontSize = 13.sp)
+                    Icon(Icons.Default.Visibility, null, modifier = Modifier.size(16.dp), tint = Color.Black)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Profile", color = Color.Black, fontSize = 13.sp)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(Modifier.width(6.dp))
                 Button(
-                    onClick = onReview,
+                    onClick  = onShortlist,
                     modifier = Modifier.weight(1f).height(40.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B69E4)),
-                    shape = RoundedCornerShape(8.dp)
+                    enabled  = applicant.statusBadge != "Shortlisted",
+                    colors   = ButtonDefaults.buttonColors(containerColor = primaryBlue),
+                    shape    = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Review", fontSize = 13.sp, color = Color.White)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Shortlist", fontSize = 12.sp, color = Color.White)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(Modifier.width(6.dp))
                 IconButton(
-                    onClick = {},
-                    modifier = Modifier.size(40.dp).border(1.dp, Color.LightGray, RoundedCornerShape(8.dp))
+                    onClick  = onReject,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .border(1.dp, Color(0xFFF44336), RoundedCornerShape(8.dp))
                 ) {
-                    Icon(Icons.Default.BookmarkBorder, null, tint = Color.Gray)
+                    Icon(Icons.Default.Cancel, null, tint = Color(0xFFF44336))
                 }
             }
         }
@@ -287,14 +464,14 @@ fun EmployerApplicantCard(applicant: ApplicantItem, badgeColor: Color, onViewPro
 @Composable
 fun StatusLabel(text: String, color: Color) {
     Surface(
-        color = color.copy(alpha = 0.1f),
+        color = color.copy(alpha = 0.12f),
         shape = RoundedCornerShape(4.dp)
     ) {
         Text(
-            text = text,
-            color = color,
-            fontSize = 10.sp,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            text       = text,
+            color      = color,
+            fontSize   = 10.sp,
+            modifier   = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             fontWeight = FontWeight.Bold
         )
     }
@@ -307,10 +484,10 @@ fun EmployerSkillChip(skill: String) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(
-            text = skill,
+            text     = skill,
             fontSize = 11.sp,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            color = Color.DarkGray
+            color    = Color(0xFF3B69E4)
         )
     }
 }

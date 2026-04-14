@@ -7,10 +7,18 @@ data class User(
     val name: String = "",
     val email: String = "",
     val role: String = "", // student, employer, admin
-    val degree: String = "",          // for students
-    val institution: String = "",     // for students
-    val graduationDate: String = "",  // for students
-    val skills: List<String> = emptyList() // for students
+
+    // 🎓 Student Info
+    val degree: String = "",
+    val institution: String = "",
+    val graduationDate: String = "",
+
+    // ✅ FIXED (needed by your ApplicantDetailsScreen)
+    val location: String = "",
+    val bio: String = "",
+    val experience: String = "",
+
+    val skills: List<String> = emptyList()
 )
 
 data class Job(
@@ -37,6 +45,8 @@ data class Application(
     val studentId: String = "",
     val status: String = "pending",
     val appliedDate: Date? = null,
+
+    // 📄 Files
     val resumeUrl: String = "",
     val portfolioUrl: String = "",
     val coverLetterUrl: String = ""
