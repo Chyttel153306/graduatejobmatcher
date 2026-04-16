@@ -116,6 +116,16 @@ class FirebaseRepository {
 
     // ---------- APPLICATION METHODS ----------
     suspend fun applyJob(application: Application) {
+        val existingApplication = db.collection("applications")
+            .whereEqualTo("jobId", application.jobId)
+            .whereEqualTo("studentId", application.studentId)
+            .get()
+            .await()
+
+        if (!existingApplication.isEmpty) {
+            throw Exception("You have already applied for this job.")
+        }
+
         val id = db.collection("applications").document().id
         val appWithId = application.copy(
             applicationId = id,
@@ -130,7 +140,7 @@ class FirebaseRepository {
     }
 
     suspend fun getApplicationsForApplicant(applicantId: String): List<Application> {
-        return db.collection("applications").whereEqualTo("applicantId", applicantId).get().await().toObjects(Application::class.java)
+        return db.collection("applications").whereEqualTo("studentId", applicantId).get().await().toObjects(Application::class.java)
     }
 
     suspend fun getApplicationById(applicationId: String): Application? {
@@ -141,6 +151,43 @@ class FirebaseRepository {
 
     suspend fun updateApplicationStatus(applicationId: String, newStatus: String) {
         db.collection("applications").document(applicationId).update("status", newStatus).await()
+    }
+
+    suspend fun scheduleInterview(interview: InterviewSchedule) {
+        val interviewId = db.collection("interviews").document().id
+        val interviewWithId = interview.copy(
+            interviewId = interviewId,
+            createdAt = Date()
+        )
+
+        db.collection("interviews").document(interviewId).set(interviewWithId).await()
+        db.collection("applications").document(interview.applicationId)
+            .update("status", "interview_scheduled")
+            .await()
+
+        val notificationId = db.collection("notifications").document().id
+        val notification = AppNotification(
+            notificationId = notificationId,
+            userId = interview.studentId,
+            title = "Interview Scheduled",
+            message = "Your interview is set for ${interview.interviewDate} at ${interview.interviewTime}.",
+            createdAt = Date(),
+            isRead = false
+        )
+        db.collection("notifications").document(notificationId).set(notification).await()
+    }
+
+    suspend fun getNotificationsForUser(userId: String): List<AppNotification> {
+        return db.collection("notifications")
+            .whereEqualTo("userId", userId)
+            .get()
+            .await()
+            .toObjects(AppNotification::class.java)
+            .sortedByDescending { it.createdAt }
+    }
+
+    suspend fun markNotificationAsRead(notificationId: String) {
+        db.collection("notifications").document(notificationId).update("isRead", true).await()
     }
 
     suspend fun getTotalApplicationsForEmployer(employerId: String): Int {

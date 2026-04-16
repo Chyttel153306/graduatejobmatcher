@@ -84,7 +84,8 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
                         studentId     = app.studentId,
                         name          = user?.name?.takeIf { it.isNotBlank() } ?: "Unknown Applicant",
                         statusBadge   = when (app.status.lowercase()) {
-                            "accepted" -> "Shortlisted"
+                            "accepted" -> "Accepted"
+                            "interview_scheduled" -> "Interview Scheduled"
                             "rejected" -> "Rejected"
                             else -> "New"
                         },
@@ -109,7 +110,8 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
             .filter { a ->
                 when (selectedFilter) {
                     "New" -> a.statusBadge == "New"
-                    "Shortlisted" -> a.statusBadge == "Shortlisted"
+                    "Accepted" -> a.statusBadge == "Accepted"
+                    "Interview Scheduled" -> a.statusBadge == "Interview Scheduled"
                     "Rejected" -> a.statusBadge == "Rejected"
                     else -> true
                 }
@@ -124,12 +126,14 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
     }
 
     val countNew         = applicants.count { it.statusBadge == "New" }
-    val countShortlisted = applicants.count { it.statusBadge == "Shortlisted" }
+    val countAccepted = applicants.count { it.statusBadge == "Accepted" }
+    val countInterviewScheduled = applicants.count { it.statusBadge == "Interview Scheduled" }
     val countRejected    = applicants.count { it.statusBadge == "Rejected" }
 
     val badgeColors = mapOf(
         "New"         to Color(0xFF4CAF50),
-        "Shortlisted" to Color(0xFFFF9800),
+        "Accepted" to Color(0xFF16A34A),
+        "Interview Scheduled" to Color(0xFF3B69E4),
         "Rejected"    to Color(0xFFF44336)
     )
 
@@ -263,7 +267,8 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
                 val filterOptions = listOf(
                     "All"         to applicants.size,
                     "New"         to countNew,
-                    "Shortlisted" to countShortlisted,
+                    "Accepted" to countAccepted,
+                    "Interview Scheduled" to countInterviewScheduled,
                     "Rejected"    to countRejected
                 )
                 LazyRow(
@@ -323,21 +328,11 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
                                             "applicant_details/${applicant.applicationId}"
                                         )
                                     },
-                                    onShortlist = {
-                                        viewModel.updateApplicationStatus(applicant.applicationId, "accepted")
-                                        applicants = applicants.map {
-                                            if (it.applicationId == applicant.applicationId)
-                                                it.copy(statusBadge = "Shortlisted")
-                                            else it
-                                        }
-                                    },
-                                    onReject = {
-                                        viewModel.updateApplicationStatus(applicant.applicationId, "rejected")
-                                        applicants = applicants.map {
-                                            if (it.applicationId == applicant.applicationId)
-                                                it.copy(statusBadge = "Rejected")
-                                            else it
-                                        }
+                                    onScheduleInterview = {
+                                        navController.navigate(
+                                            com.example.graduatejobmatcher.navigation.Screen.ScheduleInterview
+                                                .passApplicationId(applicant.applicationId)
+                                        )
                                     }
                                 )
                             }
@@ -360,8 +355,7 @@ fun EmployerApplicantCard(
     applicant    : ApplicantItem,
     badgeColor   : Color,
     onViewProfile: () -> Unit,
-    onShortlist  : () -> Unit,
-    onReject     : () -> Unit
+    onScheduleInterview: () -> Unit
 ) {
     val primaryBlue = Color(0xFF3B69E4)
 
@@ -437,24 +431,14 @@ fun EmployerApplicantCard(
                 }
                 Spacer(Modifier.width(6.dp))
                 Button(
-                    onClick  = onShortlist,
+                    onClick  = onScheduleInterview,
                     modifier = Modifier.weight(1f).height(40.dp),
-                    enabled  = applicant.statusBadge != "Shortlisted",
                     colors   = ButtonDefaults.buttonColors(containerColor = primaryBlue),
                     shape    = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(16.dp), tint = Color.White)
                     Spacer(Modifier.width(4.dp))
-                    Text("Shortlist", fontSize = 12.sp, color = Color.White)
-                }
-                Spacer(Modifier.width(6.dp))
-                IconButton(
-                    onClick  = onReject,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .border(1.dp, Color(0xFFF44336), RoundedCornerShape(8.dp))
-                ) {
-                    Icon(Icons.Default.Cancel, null, tint = Color(0xFFF44336))
+                    Text("Schedule Interview", fontSize = 12.sp, color = Color.White)
                 }
             }
         }

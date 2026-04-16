@@ -1,6 +1,7 @@
 package com.example.graduatejobmatcher.screens.student
 
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,30 +44,63 @@ fun ApplyJobScreen(
     jobTitle: String = "Job"
 ) {
     val context = LocalContext.current
+    val contentResolver = context.contentResolver
     val scope   = rememberCoroutineScope()
 
     var resumeUri      by remember { mutableStateOf<Uri?>(null) }
     var portfolioUri   by remember { mutableStateOf<Uri?>(null) }
     var coverLetterUri by remember { mutableStateOf<Uri?>(null) }
+    var resumeFileName by remember { mutableStateOf<String?>(null) }
+    var portfolioFileName by remember { mutableStateOf<String?>(null) }
+    var coverLetterFileName by remember { mutableStateOf<String?>(null) }
 
     var submitState by remember { mutableStateOf(SubmitState.IDLE) }
+    var errorMessage by remember { mutableStateOf("") }
 
     val resumeLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> resumeUri = uri }
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            runCatching {
+                contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            resumeUri = it
+            resumeFileName = it.displayName(contentResolver)
+        }
+    }
 
     val portfolioLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> portfolioUri = uri }
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            runCatching {
+                contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            portfolioUri = it
+            portfolioFileName = it.displayName(contentResolver)
+        }
+    }
 
     val coverLetterLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> coverLetterUri = uri }
-
-    fun Uri.shortName(): String =
-        lastPathSegment?.substringAfterLast("%2F")
-            ?: lastPathSegment?.substringAfterLast("/")
-            ?: "File Selected"
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            runCatching {
+                contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            coverLetterUri = it
+            coverLetterFileName = it.displayName(contentResolver)
+        }
+    }
 
     val primaryBlue = Color(0xFF1A73E8)
     val green       = Color(0xFF00C853)
@@ -114,38 +148,43 @@ fun ApplyJobScreen(
             UploadButton(
                 label = "Upload Resume",
                 selectedUri = resumeUri,
-                fileName = resumeUri?.shortName(),
+                fileName = resumeFileName,
                 accentColor = primaryBlue,
                 successColor = green,
                 enabled = submitState == SubmitState.IDLE,
-                onClick = { resumeLauncher.launch("*/*") }
+                onClick = { resumeLauncher.launch(arrayOf("*/*")) }
             )
 
             UploadButton(
                 label = "Upload Portfolio",
                 selectedUri = portfolioUri,
-                fileName = portfolioUri?.shortName(),
+                fileName = portfolioFileName,
                 accentColor = primaryBlue,
                 successColor = green,
                 enabled = submitState == SubmitState.IDLE,
-                onClick = { portfolioLauncher.launch("*/*") }
+                onClick = { portfolioLauncher.launch(arrayOf("*/*")) }
             )
 
             UploadButton(
                 label = "Upload Cover Letter",
                 selectedUri = coverLetterUri,
-                fileName = coverLetterUri?.shortName(),
+                fileName = coverLetterFileName,
                 accentColor = primaryBlue,
                 successColor = green,
                 enabled = submitState == SubmitState.IDLE,
-                onClick = { coverLetterLauncher.launch("*/*") }
+                onClick = { coverLetterLauncher.launch(arrayOf("*/*")) }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── Status feedback card (hidden when IDLE)
             if (submitState != SubmitState.IDLE) {
-                StatusCard(submitState = submitState, green = green, red = red)
+                StatusCard(
+                    submitState = submitState,
+                    green = green,
+                    red = red,
+                    failureMessage = errorMessage
+                )
             }
 
             // ── Submit button
@@ -163,6 +202,7 @@ fun ApplyJobScreen(
 
                     scope.launch {
                         submitState = SubmitState.LOADING
+                        errorMessage = ""
                         try {
                             val application = Application(
                                 jobId          = jobId,
@@ -182,6 +222,7 @@ fun ApplyJobScreen(
                             }
                         } catch (e: Exception) {
                             submitState = SubmitState.FAILED
+                            errorMessage = e.message ?: "Submission failed. Please try again."
                         }
                     }
                 },
@@ -229,11 +270,27 @@ fun ApplyJobScreen(
 }
 
 // ── Inline status card
-@Composable
-private fun StatusCard(submitState: SubmitState, green: Color, red: Color) {
-    val isSuccess = submitState == SubmitState.SUCCESS
-    val isLoading = submitState == SubmitState.LOADING
+private fun Uri.displayName(contentResolver: android.content.ContentResolver): String {
+    return runCatching {
+        contentResolver.query(this, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex >= 0 && cursor.moveToFirst()) {
+                    cursor.getString(nameIndex)
+                } else {
+                    lastPathSegment?.substringAfterLast('/') ?: "File Selected"
+                }
+            } ?: (lastPathSegment?.substringAfterLast('/') ?: "File Selected")
+    }.getOrDefault("File Selected")
+}
 
+@Composable
+private fun StatusCard(
+    submitState: SubmitState,
+    green: Color,
+    red: Color,
+    failureMessage: String
+) {
     val bgColor   = when (submitState) {
         SubmitState.LOADING -> Color(0xFFE3F2FD)
         SubmitState.SUCCESS -> Color(0xFFE8F5E9)
@@ -249,7 +306,7 @@ private fun StatusCard(submitState: SubmitState, green: Color, red: Color) {
     val message = when (submitState) {
         SubmitState.LOADING -> "Submitting your application..."
         SubmitState.SUCCESS -> "Application submitted successfully!"
-        SubmitState.FAILED  -> "Submission failed. Please try again."
+        SubmitState.FAILED  -> failureMessage.ifBlank { "Submission failed. Please try again." }
         else                -> ""
     }
 

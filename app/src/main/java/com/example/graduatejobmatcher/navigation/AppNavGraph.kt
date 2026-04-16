@@ -1,6 +1,7 @@
 package com.example.graduatejobmatcher.navigation
 
 import androidx.compose.runtime.Composable
+import android.net.Uri
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -45,6 +46,16 @@ sealed class Screen(val route: String) {
 
     object EmployerUpdateJob : Screen("employer_update_job/{jobId}") {
         fun passJobId(jobId: String) = "employer_update_job/$jobId"
+    }
+
+    object ScheduleInterview : Screen("schedule_interview/{applicationId}") {
+        fun passApplicationId(applicationId: String) = "schedule_interview/$applicationId"
+    }
+
+    object StudentNotifications : Screen("student_notifications")
+    object ApprovedJobs : Screen("approved_jobs")
+    object ResumePreview : Screen("resume_preview/{resumeUrl}") {
+        fun passResumeUrl(resumeUrl: String) = "resume_preview/${Uri.encode(resumeUrl)}"
     }
 
     object ManageUsers : Screen("manage_users")
@@ -139,6 +150,24 @@ fun AppNavGraph(
         composable(Screen.EmployerUpdateJob.route) { backStackEntry ->
             val jobId = backStackEntry.arguments?.getString("jobId") ?: ""
             EmployerUpdateJobScreen(navController, viewModel, jobId)
+        }
+
+        composable(Screen.ScheduleInterview.route) { backStackEntry ->
+            val applicationId = backStackEntry.arguments?.getString("applicationId") ?: ""
+            ScheduleInterviewScreen(navController, viewModel, applicationId)
+        }
+
+        composable(Screen.StudentNotifications.route) {
+            StudentNotificationsScreen(navController, viewModel)
+        }
+
+        composable(Screen.ApprovedJobs.route) {
+            ApprovedJobsScreen(navController, viewModel)
+        }
+
+        composable(Screen.ResumePreview.route) { backStackEntry ->
+            val resumeUrl = backStackEntry.arguments?.getString("resumeUrl") ?: ""
+            ResumePreviewScreen(navController, resumeUrl)
         }
 
         composable(Screen.EmployerJobs.route) {

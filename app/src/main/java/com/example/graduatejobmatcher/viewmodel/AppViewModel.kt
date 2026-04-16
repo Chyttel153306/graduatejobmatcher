@@ -111,7 +111,7 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 jobs.clear()
-                jobs.addAll(repo.getJobs())
+                jobs.addAll(repo.getApprovedJobs())
             } catch (_: Exception) { }
         }
     }
@@ -168,6 +168,21 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch { repo.updateApplicationStatus(applicationId, newStatus) }
     }
 
+    fun scheduleInterview(interview: InterviewSchedule, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            repo.scheduleInterview(interview)
+            onComplete()
+        }
+    }
+
+    fun getNotificationsForUser(userId: String, onResult: (List<AppNotification>) -> Unit) {
+        viewModelScope.launch { onResult(repo.getNotificationsForUser(userId)) }
+    }
+
+    fun markNotificationAsRead(notificationId: String) {
+        viewModelScope.launch { repo.markNotificationAsRead(notificationId) }
+    }
+
     // ---------- Admin ----------
     fun getPendingJobs(onResult: (List<Job>) -> Unit) {
         viewModelScope.launch { onResult(repo.getPendingJobs()) }
@@ -195,6 +210,12 @@ class AppViewModel : ViewModel() {
     fun getTotalEmployersCount(onResult: (Int) -> Unit) {
         viewModelScope.launch {
             onResult(repo.getAllUsers().count { it.role == "employer" })
+        }
+    }
+
+    fun getTotalUsersCount(onResult: (Int) -> Unit) {
+        viewModelScope.launch {
+            onResult(repo.getAllUsers().size)
         }
     }
 

@@ -51,3 +51,26 @@ data class Application(
     val portfolioUrl: String = "",
     val coverLetterUrl: String = ""
 )
+
+data class InterviewSchedule(
+    val interviewId: String = "",
+    val applicationId: String = "",
+    val jobId: String = "",
+    val employerId: String = "",
+    val studentId: String = "",
+    val interviewDate: String = "",
+    val interviewTime: String = "",
+    val interviewType: String = "",
+    val meetingLink: String = "",
+    val message: String = "",
+    val createdAt: Date? = null
+)
+
+data class AppNotification(
+    val notificationId: String = "",
+    val userId: String = "",
+    val title: String = "",
+    val message: String = "",
+    val createdAt: Date? = null,
+    val isRead: Boolean = false
+)

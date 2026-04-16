@@ -2,7 +2,6 @@ package com.example.graduatejobmatcher.screens.employer
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Work
@@ -59,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Application
+import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.model.User
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
@@ -72,7 +71,6 @@ fun ViewApplicantsScreen(
     var application by remember { mutableStateOf<Application?>(null) }
     var user by remember { mutableStateOf<User?>(null) }
     var loading by remember { mutableStateOf(true) }
-    var expandedAnswer by remember { mutableStateOf(false) }
     var currentStatus by remember { mutableStateOf("pending") }
 
     LaunchedEffect(applicationId) {
@@ -117,24 +115,17 @@ fun ViewApplicantsScreen(
     val educationSubtitle = user?.graduationDate?.ifBlank { "Graduation date not provided" }
         ?: "Graduation date not provided"
     val applicantExperience = user?.experience?.ifBlank { "Experience not provided" } ?: "Experience not provided"
-    val applicationQuestionPreview = if (application?.coverLetterUrl.isNullOrBlank()) {
-        "Application response preview is unavailable because no answer field exists in the current Application model."
-    } else {
-        "Cover letter submitted and ready for review."
-    }
     val resumeLabel = if (application?.resumeUrl.isNullOrBlank()) "Resume not uploaded" else "Resume link available"
     val coverLetterLabel = if (application?.coverLetterUrl.isNullOrBlank()) "Cover letter not uploaded" else "Cover letter link available"
+    val portfolioLabel = if (application?.portfolioUrl.isNullOrBlank()) "Portfolio not uploaded" else "Portfolio link available"
 
     val primaryBlue = Color(0xFF3D73E6)
     val pageBg = Color(0xFFF5F7FB)
     val cardBg = Color.White
-    val lightBlue = Color(0xFFEFF4FF)
     val grayText = Color(0xFF6B7280)
     val greenColor = Color(0xFF16A34A)
-    val yellowColor = Color(0xFFEAB308)
     val redColor = Color(0xFFDC2626)
     val lightGreenBg = Color(0xFFECFDF3)
-    val lightYellowBg = Color(0xFFFEFCE8)
     val lightRedBg = Color(0xFFFEF2F2)
 
     Scaffold(
@@ -182,18 +173,7 @@ fun ViewApplicantsScreen(
                         backgroundColor = lightRedBg
                     ) {
                         currentStatus = "Rejected"
-                        viewModel.updateApplicationStatus(applicationId, "Rejected")
-                    }
-
-                    OutlinedActionButton(
-                        modifier = Modifier.weight(1f),
-                        text = "Shortlist",
-                        borderColor = yellowColor,
-                        textColor = yellowColor,
-                        backgroundColor = lightYellowBg
-                    ) {
-                        currentStatus = "Shortlisted"
-                        viewModel.updateApplicationStatus(applicationId, "Shortlisted")
+                        viewModel.updateApplicationStatus(applicationId, "rejected")
                     }
 
                     OutlinedActionButton(
@@ -204,7 +184,7 @@ fun ViewApplicantsScreen(
                         backgroundColor = lightGreenBg
                     ) {
                         currentStatus = "Accepted"
-                        viewModel.updateApplicationStatus(applicationId, "Accepted")
+                        viewModel.updateApplicationStatus(applicationId, "accepted")
                     }
                 }
             }
@@ -254,22 +234,6 @@ fun ViewApplicantsScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    SectionTabs()
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    OverviewSectionCard(
-                        icon = Icons.Default.Info,
-                        title = "Application Overview",
-                        line1 = "Application ID: ${application?.applicationId?.ifBlank { "Not available" } ?: "Not available"}",
-                        line2 = "Job ID: ${application?.jobId?.ifBlank { "Not available" } ?: "Not available"}",
-                        line3 = "Applied: ${application?.appliedDate?.toString() ?: "Date not available"}",
-                        tint = primaryBlue,
-                        backgroundColor = lightBlue
-                    )
-
-                    Spacer(modifier = Modifier.height(22.dp))
-
                     SectionTitle("About")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -318,7 +282,12 @@ fun ViewApplicantsScreen(
                     FileCard(
                         title = "Resume",
                         fileLabel = resumeLabel,
-                        fileInfo = application?.resumeUrl?.ifBlank { "No URL available" } ?: "No URL available"
+                        fileInfo = application?.resumeUrl?.ifBlank { "No URL available" } ?: "No URL available",
+                        onViewClick = {
+                            application?.resumeUrl
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { navController.navigate(Screen.ResumePreview.passResumeUrl(it)) }
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(18.dp))
@@ -328,37 +297,27 @@ fun ViewApplicantsScreen(
                     FileCard(
                         title = "Cover Letter",
                         fileLabel = coverLetterLabel,
-                        fileInfo = application?.coverLetterUrl?.ifBlank { "No URL available" } ?: "No URL available"
+                        fileInfo = application?.coverLetterUrl?.ifBlank { "No URL available" } ?: "No URL available",
+                        onViewClick = {
+                            application?.coverLetterUrl
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { navController.navigate(Screen.ResumePreview.passResumeUrl(it)) }
+                        }
                     )
 
-                    Spacer(modifier = Modifier.height(22.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    SectionTitle("Application Questions")
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "1. Why are you interested in this position?",
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF111827)
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = applicationQuestionPreview,
-                        color = grayText,
-                        maxLines = if (expandedAnswer) Int.MAX_VALUE else 3,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 20.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = if (expandedAnswer) "See Less" else "See More",
-                        color = Color(0xFF4F46E5),
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.clickable { expandedAnswer = !expandedAnswer }
+                    SectionTitle("Portfolio")
+                    Spacer(modifier = Modifier.height(10.dp))
+                    FileCard(
+                        title = "Portfolio",
+                        fileLabel = portfolioLabel,
+                        fileInfo = application?.portfolioUrl?.ifBlank { "No URL available" } ?: "No URL available",
+                        onViewClick = {
+                            application?.portfolioUrl
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { navController.navigate(Screen.ResumePreview.passResumeUrl(it)) }
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(22.dp))
@@ -367,7 +326,7 @@ fun ViewApplicantsScreen(
                         text = "Status: ${currentStatus.replaceFirstChar { it.uppercase() }}",
                         color = when (currentStatus.lowercase()) {
                             "accepted" -> greenColor
-                            "shortlisted" -> yellowColor
+                            "interview_scheduled" -> primaryBlue
                             "rejected" -> redColor
                             else -> grayText
                         },
@@ -469,79 +428,6 @@ private fun InfoRow(
 }
 
 @Composable
-private fun SectionTabs() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        TabItem("Overview", true)
-        TabItem("Resume", false)
-        TabItem("Application", false)
-        TabItem("Notes", false)
-    }
-}
-
-@Composable
-private fun TabItem(title: String, selected: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = title,
-            color = if (selected) Color(0xFF3D73E6) else Color.Gray,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .height(2.dp)
-                .width(70.dp)
-                .background(if (selected) Color(0xFF3D73E6) else Color.Transparent)
-        )
-    }
-}
-
-@Composable
-private fun OverviewSectionCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    line1: String,
-    line2: String,
-    line3: String,
-    tint: Color,
-    backgroundColor: Color
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint
-            )
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Column {
-                Text(
-                    text = title,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1F2937)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = line1, color = Color(0xFF6B7280), fontSize = 14.sp)
-                Text(text = line2, color = Color(0xFF6B7280), fontSize = 14.sp)
-                Text(text = line3, color = Color(0xFF6B7280), fontSize = 14.sp)
-            }
-        }
-    }
-}
-
-@Composable
 private fun SkillsSection(skills: List<String>) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -610,7 +496,8 @@ private fun DetailCard(
 private fun FileCard(
     title: String,
     fileLabel: String,
-    fileInfo: String
+    fileInfo: String,
+    onViewClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -652,7 +539,10 @@ private fun FileCard(
                 )
             }
 
-            TextButton(onClick = { }) {
+            TextButton(
+                onClick = onViewClick,
+                enabled = fileInfo != "No URL available"
+            ) {
                 Text("View")
             }
         }

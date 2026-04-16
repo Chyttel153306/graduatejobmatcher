@@ -35,13 +35,13 @@ fun AdminDashboardScreen(navController: NavController) {
     var pendingCount   by remember { mutableStateOf("...") }
     var approvedCount  by remember { mutableStateOf("...") }
     var rejectedCount  by remember { mutableStateOf("...") }
-    var employersCount by remember { mutableStateOf("...") }
+    var usersCount by remember { mutableStateOf("...") }
 
     LaunchedEffect(Unit) {
         viewModel.getPendingJobsCount   { pendingCount   = it.toString() }
         viewModel.getApprovedJobsCount  { approvedCount  = it.toString() }
         viewModel.getRejectedJobsCount  { rejectedCount  = it.toString() }
-        viewModel.getTotalEmployersCount{ employersCount = it.toString() }
+        viewModel.getTotalUsersCount    { usersCount = it.toString() }
     }
 
     Scaffold(
@@ -54,13 +54,6 @@ fun AdminDashboardScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { }) {
-                        Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = Color.White
-                        )
-                    }
                     // ✅ Avatar — tap to go to Profile
                     Box(
                         modifier = Modifier
@@ -130,7 +123,7 @@ fun AdminDashboardScreen(navController: NavController) {
                             icon = Icons.Default.CheckCircle,
                             containerColor = Color(0xFFE8F5E9),
                             iconColor = Color(0xFF4CAF50),
-                            onClick = { }
+                            onClick = { navController.navigate(Screen.ApprovedJobs.route) }
                         )
                     }
 
@@ -150,8 +143,8 @@ fun AdminDashboardScreen(navController: NavController) {
                         )
                         StatCard(
                             modifier = Modifier.weight(1f),
-                            title = "Total Employers",
-                            count = employersCount,
+                            title = "Total Users",
+                            count = usersCount,
                             subtext = "Registered",
                             icon = Icons.Default.Group,
                             containerColor = Color(0xFFF3E5F5),

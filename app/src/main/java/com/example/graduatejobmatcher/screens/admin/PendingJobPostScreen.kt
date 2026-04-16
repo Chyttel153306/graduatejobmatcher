@@ -84,18 +84,7 @@ fun PendingJobsScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
-                actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color.LightGray)
-                    )
-                },
+                actions = {},
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
             )
         },

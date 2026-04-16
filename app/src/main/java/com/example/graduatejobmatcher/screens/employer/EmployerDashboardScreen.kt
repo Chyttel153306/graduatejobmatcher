@@ -70,11 +70,6 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Spacer(modifier = Modifier.width(1.dp))
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = null,
-                            tint = Color.White
-                        )
                     }
 
                     Text(

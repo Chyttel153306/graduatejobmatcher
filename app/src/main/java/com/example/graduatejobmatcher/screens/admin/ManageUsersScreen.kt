@@ -82,11 +82,7 @@ fun ManageUsersScreen(navController: NavController, viewModel: AppViewModel) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
-                actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
-                    }
-                },
+                actions = {},
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
             )
         },

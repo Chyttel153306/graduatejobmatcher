@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.ui.theme.components.JobCard
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
@@ -33,6 +34,17 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
 
     var selectedItem by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
+    var unreadNotificationCount by remember { mutableIntStateOf(0) }
+
+    val studentId = viewModel.getCurrentUserId().orEmpty()
+
+    LaunchedEffect(studentId) {
+        if (studentId.isNotBlank()) {
+            viewModel.getNotificationsForUser(studentId) { notifications ->
+                unreadNotificationCount = notifications.count { !it.isRead }
+            }
+        }
+    }
 
     // Filter jobs based on search query
     val filteredJobs = remember(viewModel.jobs, searchQuery) {
@@ -53,20 +65,11 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                     onClick = { selectedItem = 0 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Jobs") },
-                    label = { Text("Jobs") },
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") },
                     selected = selectedItem == 1,
                     onClick = {
                         selectedItem = 1
-                        navController.navigate("job_list")
-                    }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                    label = { Text("Profile") },
-                    selected = selectedItem == 2,
-                    onClick = {
-                        selectedItem = 2
                         navController.navigate("profile")
                     }
                 )
@@ -99,11 +102,27 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                                 .clip(CircleShape)
                                 .background(Color.LightGray)
                         )
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = Color.White
-                        )
+                        Box {
+                            IconButton(
+                                onClick = { navController.navigate(Screen.StudentNotifications.route) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Notifications",
+                                    tint = Color.White
+                                )
+                            }
+
+                            if (unreadNotificationCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .align(Alignment.TopEnd)
+                                        .clip(CircleShape)
+                                        .background(Color.Red)
+                                )
+                            }
+                        }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
