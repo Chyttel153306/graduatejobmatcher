@@ -13,7 +13,7 @@ class FirebaseRepository {
 
     // ---------- AUTH ----------
 
-    // ✅ Fixed: accepts all student fields and stores them in Firestore
+    // accepts all student fields and stores them in Firestore
     suspend fun register(
         name: String,
         email: String,
@@ -51,6 +51,11 @@ class FirebaseRepository {
         val uid = auth.currentUser?.uid ?: return null
         val doc = db.collection("users").document(uid).get().await()
         return doc.toObject(User::class.java)
+    }
+
+    suspend fun updateCurrentUserProfile(updatedFields: Map<String, Any>) {
+        val uid = auth.currentUser?.uid ?: throw Exception("User not logged in")
+        db.collection("users").document(uid).update(updatedFields).await()
     }
 
     fun getCurrentUserId(): String? = auth.currentUser?.uid
@@ -102,6 +107,11 @@ class FirebaseRepository {
         return try {
             db.collection("jobs").document(jobId).get().await().toObject(Job::class.java)
         } catch (_: Exception) { null }
+    }
+
+    suspend fun updateJob(job: Job) {
+        if (job.jobId.isBlank()) throw Exception("Job ID is required")
+        db.collection("jobs").document(job.jobId).set(job).await()
     }
 
     // ---------- APPLICATION METHODS ----------

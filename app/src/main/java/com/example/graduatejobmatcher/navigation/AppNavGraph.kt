@@ -39,9 +39,18 @@ sealed class Screen(val route: String) {
         fun passApplicationId(id: String) = "applicant_details/$id"
     }
 
+    object EmployerJobDetails : Screen("employer_job_details/{jobId}") {
+        fun passJobId(jobId: String) = "employer_job_details/$jobId"
+    }
+
+    object EmployerUpdateJob : Screen("employer_update_job/{jobId}") {
+        fun passJobId(jobId: String) = "employer_update_job/$jobId"
+    }
+
     object ManageUsers : Screen("manage_users")
     object Profile : Screen("profile")
     object EmployerApplicants : Screen("employer_applicants")
+    object ManageJobListings : Screen("manage_job_listings")
     object EmployerJobs : Screen("employer_jobs")
     object PendingJobs : Screen("pending_jobs")
 }
@@ -116,6 +125,20 @@ fun AppNavGraph(
 
         composable(Screen.EmployerApplicants.route) {
             EmployerApplicantsScreen(navController, viewModel)
+        }
+
+        composable(Screen.ManageJobListings.route) {
+            ManageJobListingsScreen(navController, viewModel)
+        }
+
+        composable(Screen.EmployerJobDetails.route) { backStackEntry ->
+            val jobId = backStackEntry.arguments?.getString("jobId") ?: ""
+            EmployerJobDetailsScreen(navController, viewModel, jobId)
+        }
+
+        composable(Screen.EmployerUpdateJob.route) { backStackEntry ->
+            val jobId = backStackEntry.arguments?.getString("jobId") ?: ""
+            EmployerUpdateJobScreen(navController, viewModel, jobId)
         }
 
         composable(Screen.EmployerJobs.route) {

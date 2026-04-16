@@ -8,12 +8,12 @@ data class User(
     val email: String = "",
     val role: String = "", // student, employer, admin
 
-    // 🎓 Student Info
+    //  Student Info
     val degree: String = "",
     val institution: String = "",
     val graduationDate: String = "",
 
-    // ✅ FIXED (needed by your ApplicantDetailsScreen)
+
     val location: String = "",
     val bio: String = "",
     val experience: String = "",

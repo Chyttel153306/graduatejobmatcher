@@ -60,6 +60,52 @@ class AppViewModel : ViewModel() {
         }
     }
 
+    fun updateCurrentUserProfile(
+        name: String,
+        degree: String,
+        institution: String,
+        graduationDate: String,
+        location: String,
+        bio: String,
+        experience: String,
+        skills: List<String>,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val existingUser = _currentUser.value ?: throw Exception("User not found")
+                val updatedFields = buildMap<String, Any> {
+                    put("name", name.trim())
+                    put("location", location.trim())
+                    put("bio", bio.trim())
+                    put("experience", experience.trim())
+                    put("skills", skills)
+
+                    if (existingUser.role == "student") {
+                        put("degree", degree.trim())
+                        put("institution", institution.trim())
+                        put("graduationDate", graduationDate.trim())
+                    }
+                }
+
+                repo.updateCurrentUserProfile(updatedFields)
+                _currentUser.value = existingUser.copy(
+                    name = name.trim(),
+                    degree = if (existingUser.role == "student") degree.trim() else existingUser.degree,
+                    institution = if (existingUser.role == "student") institution.trim() else existingUser.institution,
+                    graduationDate = if (existingUser.role == "student") graduationDate.trim() else existingUser.graduationDate,
+                    location = location.trim(),
+                    bio = bio.trim(),
+                    experience = experience.trim(),
+                    skills = skills
+                )
+                onResult(true, "")
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Profile update failed")
+            }
+        }
+    }
+
     // ---------- Job Methods ----------
     fun loadJobs() {
         viewModelScope.launch {
@@ -91,6 +137,14 @@ class AppViewModel : ViewModel() {
 
     fun getJobById(jobId: String, onResult: (Job?) -> Unit) {
         viewModelScope.launch { onResult(repo.getJobById(jobId)) }
+    }
+
+    fun updateJob(job: Job, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            repo.updateJob(job)
+            loadJobs()
+            onComplete()
+        }
     }
 
     // ---------- Application Methods ----------

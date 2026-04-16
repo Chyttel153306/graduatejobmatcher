@@ -142,7 +142,7 @@ fun EmployerDashboardScreen(navController: NavController, viewModel: AppViewMode
                     title = "Manage Job Listings",
                     items = activeJobs.map { it.title },
                     icon = Icons.AutoMirrored.Filled.List,
-                    onClick = { /* optional */ }
+                    onClick = { navController.navigate(Screen.ManageJobListings.route) }
                 )
             } else {
                 Card(
