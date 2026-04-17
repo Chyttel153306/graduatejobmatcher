@@ -82,7 +82,7 @@ fun JobDetailsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxHeight(0.75f)
-                        .background(Color(0xFFD9DBE1))
+                        .background(primaryBlue)
                 ) {
                     IconButton(
                         onClick = { navController.popBackStack() },

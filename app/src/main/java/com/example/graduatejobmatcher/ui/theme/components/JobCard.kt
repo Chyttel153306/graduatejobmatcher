@@ -2,11 +2,22 @@ package com.example.graduatejobmatcher.ui.theme.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,14 +32,15 @@ import androidx.compose.ui.unit.sp
 fun JobCard(
     title: String,
     company: String,
+    employerName: String = company,
     modifier: Modifier = Modifier,
-    color: Color = Color(0xFF3F51B5), // default brand color
-    onClick: () -> Unit = {}          // ← NEW: click handler
+    color: Color = Color(0xFF3F51B5),
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier
-            .clickable(onClick = onClick)   // ← make card clickable
-            .height(180.dp),                // keep fixed height, width will come from parent (grid)
+            .clickable(onClick = onClick)
+            .height(180.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -39,7 +51,6 @@ fun JobCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top row: logo + overflow menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -53,7 +64,7 @@ fun JobCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "CJM",
+                        text = avatarInitials(employerName),
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -68,7 +79,6 @@ fun JobCard(
                 )
             }
 
-            // Middle: title + company
             Column(modifier = Modifier.padding(top = 8.dp)) {
                 Text(
                     text = title,
@@ -88,7 +98,6 @@ fun JobCard(
                 )
             }
 
-            // Bottom: timestamp (static for now)
             Text(
                 text = "17 days ago",
                 fontSize = 12.sp,
@@ -96,5 +105,18 @@ fun JobCard(
                 color = Color.Black.copy(alpha = 0.8f)
             )
         }
+    }
+}
+
+private fun avatarInitials(name: String): String {
+    val parts = name
+        .trim()
+        .split(Regex("\\s+"))
+        .filter { it.isNotBlank() }
+
+    return when {
+        parts.size >= 2 -> "${parts[0].first()}${parts[1].first()}".uppercase()
+        parts.size == 1 -> parts[0].take(2).uppercase()
+        else -> "NA"
     }
 }

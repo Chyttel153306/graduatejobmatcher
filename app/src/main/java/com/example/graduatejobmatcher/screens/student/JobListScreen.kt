@@ -91,7 +91,7 @@ fun JobListScreen(navController: NavController, viewModel: AppViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(90.dp), // Height adjusted for row-style card
-                        color = Color.White
+                        color = Color(0xFF3F51B5)
                     )
                 }
             }

@@ -188,8 +188,13 @@ fun PostJobField(
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color(0xFFF1F1F1),
                 unfocusedContainerColor = Color(0xFFF1F1F1),
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                cursorColor = Color(0xFF3F51B5),
                 focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
+                unfocusedIndicatorColor = Color.Transparent,
+                focusedTrailingIconColor = Color.Black,
+                unfocusedTrailingIconColor = Color.Black
             ),
             singleLine = singleLine,
             trailingIcon = trailingIcon

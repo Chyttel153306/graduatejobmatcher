@@ -139,7 +139,7 @@ fun AdminDashboardScreen(navController: NavController) {
                             icon = Icons.Default.Cancel,
                             containerColor = Color(0xFFFFEBEE),
                             iconColor = Color(0xFFF44336),
-                            onClick = { }
+                            onClick = { navController.navigate(Screen.RejectedJobs.route) }
                         )
                         StatCard(
                             modifier = Modifier.weight(1f),

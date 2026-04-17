@@ -146,18 +146,6 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
                     }
                 },
-                actions = {
-                    Box(modifier = Modifier.padding(end = 12.dp)) {
-                        Icon(Icons.Default.Notifications, null, tint = Color.White)
-                        Surface(
-                            color = Color.Red,
-                            shape = CircleShape,
-                            modifier = Modifier
-                                .size(10.dp)
-                                .align(Alignment.TopEnd)
-                        ) {}
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = primaryBlue)
             )
         }

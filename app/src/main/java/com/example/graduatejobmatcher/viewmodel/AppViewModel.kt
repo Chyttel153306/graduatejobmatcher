@@ -127,6 +127,10 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch { onResult(repo.getApprovedJobs()) }
     }
 
+    fun getRejectedJobs(onResult: (List<Job>) -> Unit) {
+        viewModelScope.launch { onResult(repo.getRejectedJobs()) }
+    }
+
     fun getJobsForEmployer(employerId: String, onResult: (List<Job>) -> Unit) {
         viewModelScope.launch { onResult(repo.getJobsForEmployer(employerId)) }
     }
@@ -148,8 +152,15 @@ class AppViewModel : ViewModel() {
     }
 
     // ---------- Application Methods ----------
-    fun applyJob(application: Application) {
-        viewModelScope.launch { repo.applyJob(application) }
+    fun applyJob(application: Application, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                repo.applyJob(application)
+                onResult(true, "")
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Submission failed. Please try again.")
+            }
+        }
     }
 
     fun getApplicationsForJob(jobId: String, onResult: (List<Application>) -> Unit) {

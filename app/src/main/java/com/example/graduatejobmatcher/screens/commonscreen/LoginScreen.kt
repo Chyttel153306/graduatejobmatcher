@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +40,10 @@ fun LoginScreen(navController: NavController, viewModel: AppViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            JobMatcherLogo()
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Text(
                 text = "Login",
                 style = MaterialTheme.typography.headlineLarge,
@@ -164,5 +169,46 @@ fun LoginScreen(navController: NavController, viewModel: AppViewModel) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun JobMatcherLogo(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Surface(
+            modifier = Modifier.size(92.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = Color(0xFFE9F1FF)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Work,
+                    contentDescription = "JobMatcher Logo Placeholder",
+                    tint = Color(0xFF1E5BB8),
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = "JobMatcher",
+            fontSize = 26.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color(0xFF1E5BB8)
+        )
+
+        // Replace this placeholder with:
+        // Image(
+        //     painter = painterResource(id = R.drawable.jobmatcher_logo),
+        //     contentDescription = "JobMatcher Logo",
+        //     modifier = Modifier.size(140.dp)
+        // )
     }
 }

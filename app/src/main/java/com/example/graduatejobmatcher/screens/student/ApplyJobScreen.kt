@@ -45,7 +45,7 @@ fun ApplyJobScreen(
 ) {
     val context = LocalContext.current
     val contentResolver = context.contentResolver
-    val scope   = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
     var resumeUri      by remember { mutableStateOf<Uri?>(null) }
     var portfolioUri   by remember { mutableStateOf<Uri?>(null) }
@@ -200,29 +200,35 @@ fun ApplyJobScreen(
                         return@Button
                     }
 
-                    scope.launch {
-                        submitState = SubmitState.LOADING
-                        errorMessage = ""
-                        try {
-                            val application = Application(
-                                jobId          = jobId,
-                                studentId      = studentId,
-                                status         = "pending",
-                                resumeUrl      = resumeUri.toString(),
-                                portfolioUrl   = portfolioUri?.toString() ?: "",
-                                coverLetterUrl = coverLetterUri?.toString() ?: ""
-                            )
-                            viewModel.applyJob(application)
+                    submitState = SubmitState.LOADING
+                    errorMessage = ""
+
+                    val application = Application(
+                        jobId = jobId,
+                        studentId = studentId,
+                        status = "pending",
+                        resumeUrl = resumeUri.toString(),
+                        portfolioUrl = portfolioUri?.toString() ?: "",
+                        coverLetterUrl = coverLetterUri?.toString() ?: ""
+                    )
+
+                    viewModel.applyJob(application) { success, message ->
+                        if (success) {
                             submitState = SubmitState.SUCCESS
 
-                            // Show success briefly, then go to student dashboard
-                            delay(1500)
-                            navController.navigate(Screen.StudentDashboard.route) {
-                                popUpTo(Screen.StudentDashboard.route) { inclusive = true }
+                            scope.launch {
+                                delay(1500)
+                                navController.navigate(Screen.StudentDashboard.route) {
+                                    popUpTo(Screen.StudentDashboard.route) { inclusive = true }
+                                }
                             }
-                        } catch (e: Exception) {
+                        } else {
                             submitState = SubmitState.FAILED
-                            errorMessage = e.message ?: "Submission failed. Please try again."
+                            errorMessage = if (message.contains("already", ignoreCase = true)) {
+                                "Already submitted."
+                            } else {
+                                message
+                            }
                         }
                     }
                 },

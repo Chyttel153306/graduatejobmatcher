@@ -1,7 +1,16 @@
 package com.example.graduatejobmatcher.screens.student
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -12,8 +21,22 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,19 +45,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.graduatejobmatcher.model.User
 import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.ui.theme.components.JobCard
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @Composable
 fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel) {
-    LaunchedEffect(Unit) {
-        viewModel.loadJobs()
-    }
+    val currentUser by viewModel.currentUser.collectAsState()
+    val primaryBlue = Color(0xFF3F51B5)
 
     var selectedItem by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var unreadNotificationCount by remember { mutableIntStateOf(0) }
+    var employerProfiles by remember { mutableStateOf<Map<String, User>>(emptyMap()) }
+
+    LaunchedEffect(Unit) {
+        if (currentUser == null) {
+            viewModel.fetchCurrentUser()
+        }
+        viewModel.loadJobs()
+    }
 
     val studentId = viewModel.getCurrentUserId().orEmpty()
 
@@ -46,12 +77,31 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
         }
     }
 
-    // Filter jobs based on search query
+    LaunchedEffect(viewModel.jobs.toList()) {
+        val employerIds = viewModel.jobs
+            .map { it.employerId }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        employerIds.forEach { employerId ->
+            if (!employerProfiles.containsKey(employerId)) {
+                viewModel.getUserById(employerId) { employer ->
+                    if (employer != null) {
+                        employerProfiles = employerProfiles + (employerId to employer)
+                    }
+                }
+            }
+        }
+    }
+
     val filteredJobs = remember(viewModel.jobs, searchQuery) {
-        if (searchQuery.isBlank()) viewModel.jobs
-        else viewModel.jobs.filter { job ->
-            job.title.contains(searchQuery, ignoreCase = true) ||
+        if (searchQuery.isBlank()) {
+            viewModel.jobs
+        } else {
+            viewModel.jobs.filter { job ->
+                job.title.contains(searchQuery, ignoreCase = true) ||
                     job.company.contains(searchQuery, ignoreCase = true)
+            }
         }
     }
 
@@ -82,12 +132,11 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                 .padding(paddingValues)
                 .background(Color(0xFFF5F5F5))
         ) {
-            // Blue header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-                    .background(Color(0xFF3F51B5))
+                    .background(primaryBlue)
                     .padding(24.dp)
             ) {
                 Column {
@@ -100,8 +149,17 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color.LightGray)
-                        )
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = userInitials(currentUser?.name),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+
                         Box {
                             IconButton(
                                 onClick = { navController.navigate(Screen.StudentNotifications.route) }
@@ -124,9 +182,11 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                             }
                         }
                     }
+
                     Spacer(modifier = Modifier.height(16.dp))
+
                     Text(
-                        text = "Hello, ${viewModel.currentUser.value?.name ?: "Student"}!",
+                        text = "Hello, ${currentUser?.name ?: "Student"}!",
                         color = Color.White,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold
@@ -134,7 +194,6 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                 }
             }
 
-            // Main content
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Job Recommendations",
@@ -150,7 +209,6 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Search bar
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -166,7 +224,6 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Job grid – each card is fully clickable
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -174,13 +231,15 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(filteredJobs) { job ->
+                        val employerName = employerProfiles[job.employerId]?.name ?: job.company
+
                         JobCard(
                             title = job.title,
                             company = job.company,
+                            employerName = employerName,
                             modifier = Modifier.fillMaxWidth(),
-                            color = Color.White,
+                            color = primaryBlue,
                             onClick = {
-                                // Use job.id (computed from jobId)
                                 navController.navigate("job_details/${job.id}")
                             }
                         )
@@ -188,5 +247,19 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                 }
             }
         }
+    }
+}
+
+private fun userInitials(name: String?): String {
+    val parts = name
+        .orEmpty()
+        .trim()
+        .split(Regex("\\s+"))
+        .filter { it.isNotBlank() }
+
+    return when {
+        parts.size >= 2 -> "${parts[0].first()}${parts[1].first()}".uppercase()
+        parts.size == 1 -> parts[0].first().uppercase()
+        else -> "U"
     }
 }

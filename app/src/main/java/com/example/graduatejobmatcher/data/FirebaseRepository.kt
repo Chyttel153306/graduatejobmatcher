@@ -123,7 +123,7 @@ class FirebaseRepository {
             .await()
 
         if (!existingApplication.isEmpty) {
-            throw Exception("You have already applied for this job.")
+            throw Exception("Already submitted.")
         }
 
         val id = db.collection("applications").document().id

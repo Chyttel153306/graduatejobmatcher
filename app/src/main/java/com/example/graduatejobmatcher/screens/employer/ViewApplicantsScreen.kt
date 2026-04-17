@@ -1,5 +1,7 @@
 package com.example.graduatejobmatcher.screens.employer
 
+import android.net.Uri
+import android.widget.ImageView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -21,9 +23,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
@@ -51,14 +56,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Application
-import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.model.User
+import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,9 +122,6 @@ fun ViewApplicantsScreen(
     val educationSubtitle = user?.graduationDate?.ifBlank { "Graduation date not provided" }
         ?: "Graduation date not provided"
     val applicantExperience = user?.experience?.ifBlank { "Experience not provided" } ?: "Experience not provided"
-    val resumeLabel = if (application?.resumeUrl.isNullOrBlank()) "Resume not uploaded" else "Resume link available"
-    val coverLetterLabel = if (application?.coverLetterUrl.isNullOrBlank()) "Cover letter not uploaded" else "Cover letter link available"
-    val portfolioLabel = if (application?.portfolioUrl.isNullOrBlank()) "Portfolio not uploaded" else "Portfolio link available"
 
     val primaryBlue = Color(0xFF3D73E6)
     val pageBg = Color(0xFFF5F7FB)
@@ -279,11 +283,11 @@ fun ViewApplicantsScreen(
 
                     SectionTitle("Resume")
                     Spacer(modifier = Modifier.height(10.dp))
-                    FileCard(
+                    AttachmentPreviewCard(
                         title = "Resume",
-                        fileLabel = resumeLabel,
-                        fileInfo = application?.resumeUrl?.ifBlank { "No URL available" } ?: "No URL available",
-                        onViewClick = {
+                        uriString = application?.resumeUrl.orEmpty(),
+                        accentColor = primaryBlue,
+                        onOpenClick = {
                             application?.resumeUrl
                                 ?.takeIf { it.isNotBlank() }
                                 ?.let { navController.navigate(Screen.ResumePreview.passResumeUrl(it)) }
@@ -294,11 +298,11 @@ fun ViewApplicantsScreen(
 
                     SectionTitle("Cover Letter")
                     Spacer(modifier = Modifier.height(10.dp))
-                    FileCard(
+                    AttachmentPreviewCard(
                         title = "Cover Letter",
-                        fileLabel = coverLetterLabel,
-                        fileInfo = application?.coverLetterUrl?.ifBlank { "No URL available" } ?: "No URL available",
-                        onViewClick = {
+                        uriString = application?.coverLetterUrl.orEmpty(),
+                        accentColor = primaryBlue,
+                        onOpenClick = {
                             application?.coverLetterUrl
                                 ?.takeIf { it.isNotBlank() }
                                 ?.let { navController.navigate(Screen.ResumePreview.passResumeUrl(it)) }
@@ -309,11 +313,11 @@ fun ViewApplicantsScreen(
 
                     SectionTitle("Portfolio")
                     Spacer(modifier = Modifier.height(10.dp))
-                    FileCard(
+                    AttachmentPreviewCard(
                         title = "Portfolio",
-                        fileLabel = portfolioLabel,
-                        fileInfo = application?.portfolioUrl?.ifBlank { "No URL available" } ?: "No URL available",
-                        onViewClick = {
+                        uriString = application?.portfolioUrl.orEmpty(),
+                        accentColor = primaryBlue,
+                        onOpenClick = {
                             application?.portfolioUrl
                                 ?.takeIf { it.isNotBlank() }
                                 ?.let { navController.navigate(Screen.ResumePreview.passResumeUrl(it)) }
@@ -493,60 +497,137 @@ private fun DetailCard(
 }
 
 @Composable
-private fun FileCard(
+private fun AttachmentPreviewCard(
     title: String,
-    fileLabel: String,
-    fileInfo: String,
-    onViewClick: () -> Unit
+    uriString: String,
+    accentColor: Color,
+    onOpenClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val hasAttachment = uriString.isNotBlank()
+    val isImageAttachment = remember(uriString) { uriString.isImageAttachment(context) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Description,
-                contentDescription = null,
-                tint = Color(0xFF3D73E6),
-                modifier = Modifier.size(28.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF111827)
+        Column(modifier = Modifier.padding(14.dp)) {
+            if (hasAttachment && isImageAttachment) {
+                AndroidView(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(190.dp)
+                        .clip(RoundedCornerShape(14.dp)),
+                    factory = { androidContext ->
+                        ImageView(androidContext).apply {
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            adjustViewBounds = true
+                        }
+                    },
+                    update = { imageView ->
+                        imageView.setImageURI(Uri.parse(uriString))
+                    }
                 )
-                Text(
-                    text = fileLabel,
-                    color = Color(0xFF374151),
-                    fontSize = 13.sp
-                )
-                Text(
-                    text = fileInfo,
-                    color = Color.Gray,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(170.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White)
+                        .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = if (hasAttachment) Icons.AutoMirrored.Filled.InsertDriveFile else Icons.Default.Image,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(42.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = if (hasAttachment) "$title uploaded" else "$title not uploaded",
+                            color = Color(0xFF111827),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (hasAttachment) {
+                                "Preview not available for this file type."
+                            } else {
+                                "No file attached yet."
+                            },
+                            color = Color(0xFF6B7280),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
             }
 
-            TextButton(
-                onClick = onViewClick,
-                enabled = fileInfo != "No URL available"
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("View")
+                Icon(
+                    imageVector = if (isImageAttachment) Icons.Default.Description else Icons.AutoMirrored.Filled.InsertDriveFile,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF111827)
+                    )
+                    Text(
+                        text = if (hasAttachment) uriString else "No URL available",
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                TextButton(
+                    onClick = onOpenClick,
+                    enabled = hasAttachment
+                ) {
+                    Icon(
+                        Icons.Default.OpenInFull,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Open", color = accentColor)
+                }
             }
         }
     }
+}
+
+private fun String.isImageAttachment(context: android.content.Context): Boolean {
+    if (isBlank()) return false
+
+    val parsedUri = Uri.parse(this)
+    val mimeType = runCatching {
+        context.contentResolver.getType(parsedUri)
+    }.getOrNull()
+
+    if (mimeType?.startsWith("image/") == true) {
+        return true
+    }
+
+    val lower = lowercase()
+    return lower.endsWith(".png") ||
+        lower.endsWith(".jpg") ||
+        lower.endsWith(".jpeg") ||
+        lower.endsWith(".webp")
 }
 
 @Composable

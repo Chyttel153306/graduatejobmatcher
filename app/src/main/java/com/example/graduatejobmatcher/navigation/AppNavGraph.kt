@@ -54,6 +54,7 @@ sealed class Screen(val route: String) {
 
     object StudentNotifications : Screen("student_notifications")
     object ApprovedJobs : Screen("approved_jobs")
+    object RejectedJobs : Screen("rejected_jobs")
     object ResumePreview : Screen("resume_preview/{resumeUrl}") {
         fun passResumeUrl(resumeUrl: String) = "resume_preview/${Uri.encode(resumeUrl)}"
     }
@@ -163,6 +164,10 @@ fun AppNavGraph(
 
         composable(Screen.ApprovedJobs.route) {
             ApprovedJobsScreen(navController, viewModel)
+        }
+
+        composable(Screen.RejectedJobs.route) {
+            RejectedJobsScreen(navController, viewModel)
         }
 
         composable(Screen.ResumePreview.route) { backStackEntry ->
