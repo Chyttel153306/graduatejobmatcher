@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.firebase.firestore)
+    implementation("com.google.android.gms:play-services-basement:18.10.0")
     implementation(libs.androidx.compose.animation.core.lint)
     implementation(libs.androidx.compose.foundation)
     testImplementation(libs.junit)

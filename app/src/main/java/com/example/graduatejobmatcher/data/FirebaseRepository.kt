@@ -25,8 +25,8 @@ class FirebaseRepository {
         graduationDate: String = "",
         skills: List<String> = emptyList()
     ) {
-        val result = auth.createUserWithEmailAndPassword(email, password).await()
-        val uid = result.user?.uid ?: throw Exception("User creation failed")
+        auth.createUserWithEmailAndPassword(email, password).await()
+        val uid = auth.uid ?: throw Exception("User creation failed")
 
         val user = User(
             userId = uid,
@@ -42,24 +42,24 @@ class FirebaseRepository {
     }
 
     suspend fun login(email: String, password: String): User {
-        val result = auth.signInWithEmailAndPassword(email, password).await()
-        val uid = result.user?.uid ?: throw Exception("Login failed")
+        auth.signInWithEmailAndPassword(email, password).await()
+        val uid = auth.uid ?: throw Exception("Login failed")
         val doc = db.collection("users").document(uid).get().await()
         return doc.toObject(User::class.java) ?: throw Exception("User data missing")
     }
 
     suspend fun getCurrentUser(): User? {
-        val uid = auth.currentUser?.uid ?: return null
+        val uid = auth.uid ?: return null
         val doc = db.collection("users").document(uid).get().await()
         return doc.toObject(User::class.java)
     }
 
     suspend fun updateCurrentUserProfile(updatedFields: Map<String, Any>) {
-        val uid = auth.currentUser?.uid ?: throw Exception("User not logged in")
+        val uid = auth.uid ?: throw Exception("User not logged in")
         db.collection("users").document(uid).update(updatedFields).await()
     }
 
-    fun getCurrentUserId(): String? = auth.currentUser?.uid
+    fun getCurrentUserId(): String? = auth.uid
     fun logout() = auth.signOut()
 
     // ---------- USER LOOKUP (added) ----------
@@ -78,10 +78,6 @@ class FirebaseRepository {
             status = "pending"
         )
         db.collection("jobs").document(id).set(jobWithId).await()
-    }
-
-    suspend fun getJobs(): List<Job> {
-        return db.collection("jobs").get().await().toObjects(Job::class.java)
     }
 
     fun listenJobsByStatus(status: String, onResult: (List<Job>) -> Unit): ListenerRegistration {
