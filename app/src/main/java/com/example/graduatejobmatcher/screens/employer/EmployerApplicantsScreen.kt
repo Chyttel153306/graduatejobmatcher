@@ -54,24 +54,40 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
     val primaryBlue = Color(0xFF3B69E4)
     val backgroundColor = Color(0xFFF7F8FA)
 
-    LaunchedEffect(employerId) {
-        viewModel.getJobsForEmployer(employerId) { jobList ->
-            jobs = jobList
-            if (selectedJob == null && jobList.isNotEmpty()) {
-                selectedJob = jobList.first()
+    DisposableEffect(employerId) {
+        if (employerId.isBlank()) {
+            jobs = emptyList()
+            selectedJob = null
+            onDispose { }
+        } else {
+            val registration = viewModel.listenJobsForEmployer(employerId) { jobList ->
+                jobs = jobList
+                selectedJob = when {
+                    jobList.isEmpty() -> null
+                    selectedJob == null -> jobList.first()
+                    jobList.none { it.jobId == selectedJob?.jobId } -> jobList.first()
+                    else -> selectedJob
+                }
             }
+            onDispose { registration.remove() }
         }
     }
 
-    LaunchedEffect(selectedJob) {
-        val job = selectedJob ?: return@LaunchedEffect
+    DisposableEffect(selectedJob?.jobId) {
+        val job = selectedJob
+        if (job == null) {
+            applicants = emptyList()
+            isLoadingApplicants = false
+            onDispose { }
+        } else {
         isLoadingApplicants = true
         applicants = emptyList()
 
-        viewModel.getApplicationsForJob(job.jobId) { applications ->
+        val registration = viewModel.listenApplicationsForJob(job.jobId) { applications ->
             if (applications.isEmpty()) {
+                applicants = emptyList()
                 isLoadingApplicants = false
-                return@getApplicationsForJob
+                return@listenApplicationsForJob
             }
 
             val enriched = mutableListOf<ApplicantItem>()
@@ -102,6 +118,8 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
                     }
                 }
             }
+        }
+        onDispose { registration.remove() }
         }
     }
 

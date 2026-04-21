@@ -2,6 +2,7 @@ package com.example.graduatejobmatcher.data
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.example.graduatejobmatcher.model.*
 import kotlinx.coroutines.tasks.await
 import java.util.*
@@ -83,6 +84,18 @@ class FirebaseRepository {
         return db.collection("jobs").get().await().toObjects(Job::class.java)
     }
 
+    fun listenJobsByStatus(status: String, onResult: (List<Job>) -> Unit): ListenerRegistration {
+        return db.collection("jobs")
+            .whereEqualTo("status", status)
+            .addSnapshotListener { snapshot, _ ->
+                val jobs = snapshot
+                    ?.toObjects(Job::class.java)
+                    ?.sortedByDescending { it.postedDate }
+                    ?: emptyList()
+                onResult(jobs)
+            }
+    }
+
     suspend fun getPendingJobs(): List<Job> {
         return db.collection("jobs").whereEqualTo("status", "pending").get().await().toObjects(Job::class.java)
     }
@@ -103,6 +116,18 @@ class FirebaseRepository {
         return db.collection("jobs").whereEqualTo("employerId", employerId).get().await().toObjects(Job::class.java)
     }
 
+    fun listenJobsForEmployer(employerId: String, onResult: (List<Job>) -> Unit): ListenerRegistration {
+        return db.collection("jobs")
+            .whereEqualTo("employerId", employerId)
+            .addSnapshotListener { snapshot, _ ->
+                val jobs = snapshot
+                    ?.toObjects(Job::class.java)
+                    ?.sortedByDescending { it.postedDate }
+                    ?: emptyList()
+                onResult(jobs)
+            }
+    }
+
     suspend fun getJobById(jobId: String): Job? {
         return try {
             db.collection("jobs").document(jobId).get().await().toObject(Job::class.java)
@@ -112,6 +137,30 @@ class FirebaseRepository {
     suspend fun updateJob(job: Job) {
         if (job.jobId.isBlank()) throw Exception("Job ID is required")
         db.collection("jobs").document(job.jobId).set(job).await()
+    }
+
+    suspend fun deleteJob(jobId: String) {
+        if (jobId.isBlank()) throw Exception("Job ID is required")
+
+        val applications = db.collection("applications")
+            .whereEqualTo("jobId", jobId)
+            .get()
+            .await()
+        val interviews = db.collection("interviews")
+            .whereEqualTo("jobId", jobId)
+            .get()
+            .await()
+        val notifications = db.collection("notifications")
+            .whereEqualTo("jobId", jobId)
+            .get()
+            .await()
+
+        val batch = db.batch()
+        batch.delete(db.collection("jobs").document(jobId))
+        applications.documents.forEach { batch.delete(it.reference) }
+        interviews.documents.forEach { batch.delete(it.reference) }
+        notifications.documents.forEach { batch.delete(it.reference) }
+        batch.commit().await()
     }
 
     // ---------- APPLICATION METHODS ----------
@@ -129,6 +178,7 @@ class FirebaseRepository {
         val id = db.collection("applications").document().id
         val appWithId = application.copy(
             applicationId = id,
+            applicantId = application.applicantId.ifBlank { application.studentId },
             appliedDate = Date(),
             status = "pending"
         )
@@ -137,6 +187,18 @@ class FirebaseRepository {
 
     suspend fun getApplicationsForJob(jobId: String): List<Application> {
         return db.collection("applications").whereEqualTo("jobId", jobId).get().await().toObjects(Application::class.java)
+    }
+
+    fun listenApplicationsForJob(jobId: String, onResult: (List<Application>) -> Unit): ListenerRegistration {
+        return db.collection("applications")
+            .whereEqualTo("jobId", jobId)
+            .addSnapshotListener { snapshot, _ ->
+                val applications = snapshot
+                    ?.toObjects(Application::class.java)
+                    ?.sortedByDescending { it.appliedDate }
+                    ?: emptyList()
+                onResult(applications)
+            }
     }
 
     suspend fun getApplicationsForApplicant(applicantId: String): List<Application> {
@@ -159,6 +221,8 @@ class FirebaseRepository {
             interviewId = interviewId,
             createdAt = Date()
         )
+        val job = getJobById(interview.jobId)
+        val employer = getUserById(interview.employerId)
 
         db.collection("interviews").document(interviewId).set(interviewWithId).await()
         db.collection("applications").document(interview.applicationId)
@@ -170,9 +234,22 @@ class FirebaseRepository {
             notificationId = notificationId,
             userId = interview.studentId,
             title = "Interview Scheduled",
-            message = "Your interview is set for ${interview.interviewDate} at ${interview.interviewTime}.",
+            message = "Your interview for ${job?.title?.ifBlank { "your application" } ?: "your application"} is set for ${interview.interviewDate} at ${interview.interviewTime}.",
             createdAt = Date(),
-            isRead = false
+            isRead = false,
+            type = "interview_scheduled",
+            applicationId = interview.applicationId,
+            jobId = interview.jobId,
+            interviewId = interviewId,
+            employerId = interview.employerId,
+            employerName = employer?.name.orEmpty(),
+            company = job?.company.orEmpty(),
+            jobTitle = job?.title.orEmpty(),
+            interviewDate = interview.interviewDate,
+            interviewTime = interview.interviewTime,
+            interviewType = interview.interviewType,
+            meetingLink = interview.meetingLink,
+            detailMessage = interview.message
         )
         db.collection("notifications").document(notificationId).set(notification).await()
     }
@@ -184,6 +261,18 @@ class FirebaseRepository {
             .await()
             .toObjects(AppNotification::class.java)
             .sortedByDescending { it.createdAt }
+    }
+
+    fun listenNotificationsForUser(userId: String, onResult: (List<AppNotification>) -> Unit): ListenerRegistration {
+        return db.collection("notifications")
+            .whereEqualTo("userId", userId)
+            .addSnapshotListener { snapshot, _ ->
+                val notifications = snapshot
+                    ?.toObjects(AppNotification::class.java)
+                    ?.sortedByDescending { it.createdAt }
+                    ?: emptyList()
+                onResult(notifications)
+            }
     }
 
     suspend fun markNotificationAsRead(notificationId: String) {
@@ -203,6 +292,13 @@ class FirebaseRepository {
     // ---------- ADMIN ----------
     suspend fun getAllUsers(): List<User> {
         return db.collection("users").get().await().toObjects(User::class.java)
+    }
+
+    fun listenAllUsers(onResult: (List<User>) -> Unit): ListenerRegistration {
+        return db.collection("users")
+            .addSnapshotListener { snapshot, _ ->
+                onResult(snapshot?.toObjects(User::class.java) ?: emptyList())
+            }
     }
 
     suspend fun updateUserRole(userId: String, newRole: String) {

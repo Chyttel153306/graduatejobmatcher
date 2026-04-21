@@ -53,6 +53,7 @@ sealed class Screen(val route: String) {
     }
 
     object StudentNotifications : Screen("student_notifications")
+    object AdminReport : Screen("admin_report")
     object ApprovedJobs : Screen("approved_jobs")
     object RejectedJobs : Screen("rejected_jobs")
     object ResumePreview : Screen("resume_preview/{resumeUrl}") {
@@ -94,7 +95,7 @@ fun AppNavGraph(
         }
 
         composable(Screen.AdminDashboard.route) {
-            AdminDashboardScreen(navController)
+            AdminDashboardScreen(navController, viewModel)
         }
 
         composable(Screen.PostJob.route) {
@@ -164,6 +165,10 @@ fun AppNavGraph(
 
         composable(Screen.ApprovedJobs.route) {
             ApprovedJobsScreen(navController, viewModel)
+        }
+
+        composable(Screen.AdminReport.route) {
+            AdminReportScreen(navController, viewModel)
         }
 
         composable(Screen.RejectedJobs.route) {

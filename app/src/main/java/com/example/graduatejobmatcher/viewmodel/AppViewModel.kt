@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.example.graduatejobmatcher.data.FirebaseRepository
 import com.example.graduatejobmatcher.model.*
+import com.google.firebase.firestore.ListenerRegistration
 
 class AppViewModel : ViewModel() {
 
@@ -135,6 +136,10 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch { onResult(repo.getJobsForEmployer(employerId)) }
     }
 
+    fun listenJobsForEmployer(employerId: String, onResult: (List<Job>) -> Unit): ListenerRegistration {
+        return repo.listenJobsForEmployer(employerId, onResult)
+    }
+
     fun getTotalApplicationsForEmployer(employerId: String, onResult: (Int) -> Unit) {
         viewModelScope.launch { onResult(repo.getTotalApplicationsForEmployer(employerId)) }
     }
@@ -148,6 +153,18 @@ class AppViewModel : ViewModel() {
             repo.updateJob(job)
             loadJobs()
             onComplete()
+        }
+    }
+
+    fun deleteJob(jobId: String, onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            try {
+                repo.deleteJob(jobId)
+                loadJobs()
+                onResult(true, "")
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Delete failed")
+            }
         }
     }
 
@@ -165,6 +182,10 @@ class AppViewModel : ViewModel() {
 
     fun getApplicationsForJob(jobId: String, onResult: (List<Application>) -> Unit) {
         viewModelScope.launch { onResult(repo.getApplicationsForJob(jobId)) }
+    }
+
+    fun listenApplicationsForJob(jobId: String, onResult: (List<Application>) -> Unit): ListenerRegistration {
+        return repo.listenApplicationsForJob(jobId, onResult)
     }
 
     fun getApplicationsForApplicant(applicantId: String, onResult: (List<Application>) -> Unit) {
@@ -190,6 +211,10 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch { onResult(repo.getNotificationsForUser(userId)) }
     }
 
+    fun listenNotificationsForUser(userId: String, onResult: (List<AppNotification>) -> Unit): ListenerRegistration {
+        return repo.listenNotificationsForUser(userId, onResult)
+    }
+
     fun markNotificationAsRead(notificationId: String) {
         viewModelScope.launch { repo.markNotificationAsRead(notificationId) }
     }
@@ -197,6 +222,10 @@ class AppViewModel : ViewModel() {
     // ---------- Admin ----------
     fun getPendingJobs(onResult: (List<Job>) -> Unit) {
         viewModelScope.launch { onResult(repo.getPendingJobs()) }
+    }
+
+    fun listenJobsByStatus(status: String, onResult: (List<Job>) -> Unit): ListenerRegistration {
+        return repo.listenJobsByStatus(status, onResult)
     }
 
     fun updateJobStatus(jobId: String, status: String, onComplete: () -> Unit = {}) {
@@ -232,6 +261,47 @@ class AppViewModel : ViewModel() {
 
     fun getAllUsers(onResult: (List<User>) -> Unit) {
         viewModelScope.launch { onResult(repo.getAllUsers()) }
+    }
+
+    fun listenAllUsers(onResult: (List<User>) -> Unit): ListenerRegistration {
+        return repo.listenAllUsers(onResult)
+    }
+
+    fun listenAdminReport(onResult: (AdminReport) -> Unit): List<ListenerRegistration> {
+        var pendingJobs = emptyList<Job>()
+        var approvedJobs = emptyList<Job>()
+        var rejectedJobs = emptyList<Job>()
+        var users = emptyList<User>()
+
+        fun emit() {
+            onResult(
+                AdminReport(
+                    pendingJobs = pendingJobs,
+                    approvedJobs = approvedJobs,
+                    rejectedJobs = rejectedJobs,
+                    users = users
+                )
+            )
+        }
+
+        return listOf(
+            repo.listenJobsByStatus("pending") {
+                pendingJobs = it
+                emit()
+            },
+            repo.listenJobsByStatus("approved") {
+                approvedJobs = it
+                emit()
+            },
+            repo.listenJobsByStatus("rejected") {
+                rejectedJobs = it
+                emit()
+            },
+            repo.listenAllUsers {
+                users = it
+                emit()
+            }
+        )
     }
 
     fun getUserById(userId: String, onResult: (User?) -> Unit) {

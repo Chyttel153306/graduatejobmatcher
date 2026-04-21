@@ -20,7 +20,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -34,9 +36,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,22 +76,24 @@ fun ManageJobListingsScreen(
     var searchText by remember { mutableStateOf("") }
     var jobs by remember { mutableStateOf<List<Job>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var jobToDelete by remember { mutableStateOf<Job?>(null) }
 
     val bgColor = Color(0xFFF5F7FB)
     val appBarBlue = Color(0xFF3E73E9)
     val employerId = viewModel.getCurrentUserId().orEmpty()
 
-    LaunchedEffect(employerId) {
+    DisposableEffect(employerId) {
         if (employerId.isBlank()) {
             isLoading = false
             jobs = emptyList()
-            return@LaunchedEffect
-        }
-
-        isLoading = true
-        viewModel.getJobsForEmployer(employerId) { employerJobs ->
-            jobs = employerJobs
-            isLoading = false
+            onDispose { }
+        } else {
+            isLoading = true
+            val registration = viewModel.listenJobsForEmployer(employerId) { employerJobs ->
+                jobs = employerJobs
+                isLoading = false
+            }
+            onDispose { registration.remove() }
         }
     }
 
@@ -201,7 +206,8 @@ fun ManageJobListingsScreen(
                             ManageJobCard(
                                 job = job,
                                 onViewClick = { onViewClick(job) },
-                                onUpdateClick = { onUpdateClick(job) }
+                                onUpdateClick = { onUpdateClick(job) },
+                                onDeleteClick = { jobToDelete = job }
                             )
                         }
 
@@ -212,6 +218,33 @@ fun ManageJobListingsScreen(
                 }
             }
         }
+    }
+
+    val pendingDelete = jobToDelete
+    if (pendingDelete != null) {
+        AlertDialog(
+            onDismissRequest = { jobToDelete = null },
+            title = { Text("Delete Job") },
+            text = {
+                Text("Delete ${pendingDelete.title.ifBlank { "this job" }}? This will also remove its applications, interviews, and related notifications from Firebase.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteJob(pendingDelete.jobId) { success, _ ->
+                            if (success) jobToDelete = null
+                        }
+                    }
+                ) {
+                    Text("Delete", color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { jobToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -255,7 +288,8 @@ private fun SearchBox(
 private fun ManageJobCard(
     job: Job,
     onViewClick: () -> Unit,
-    onUpdateClick: () -> Unit
+    onUpdateClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -330,54 +364,74 @@ private fun ManageJobCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = onViewClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.5.dp,
-                        Color(0xFF356EEA)
-                    ),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF356EEA)
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "View",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    OutlinedButton(
+                        onClick = onViewClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.5.dp,
+                            Color(0xFF356EEA)
+                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFF356EEA)
+                        )
+                    ) {
+                        Text(
+                            text = "View",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Button(
+                        onClick = onUpdateClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF37BA6B),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Update",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Update",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Button(
-                    onClick = onUpdateClick,
+                OutlinedButton(
+                    onClick = onDeleteClick,
                     modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                        .fillMaxWidth()
+                        .height(46.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF37BA6B),
-                        contentColor = Color.White
-                    )
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFDC2626)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626))
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Update",
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Update",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    Text("Delete", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
         }

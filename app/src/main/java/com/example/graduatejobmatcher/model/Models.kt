@@ -72,5 +72,25 @@ data class AppNotification(
     val title: String = "",
     val message: String = "",
     val createdAt: Date? = null,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val type: String = "",
+    val applicationId: String = "",
+    val jobId: String = "",
+    val interviewId: String = "",
+    val employerId: String = "",
+    val employerName: String = "",
+    val company: String = "",
+    val jobTitle: String = "",
+    val interviewDate: String = "",
+    val interviewTime: String = "",
+    val interviewType: String = "",
+    val meetingLink: String = "",
+    val detailMessage: String = ""
+)
+
+data class AdminReport(
+    val pendingJobs: List<Job> = emptyList(),
+    val approvedJobs: List<Job> = emptyList(),
+    val rejectedJobs: List<Job> = emptyList(),
+    val users: List<User> = emptyList()
 )

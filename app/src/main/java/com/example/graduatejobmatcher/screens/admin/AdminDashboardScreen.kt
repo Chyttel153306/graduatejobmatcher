@@ -18,17 +18,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminDashboardScreen(navController: NavController) {
-
-    val viewModel: AppViewModel = viewModel()
-
+fun AdminDashboardScreen(
+    navController: NavController,
+    viewModel: AppViewModel
+) {
     val primaryBlue    = Color(0xFF3F51B5)
     val backgroundColor = Color(0xFFF5F7FA)
 
@@ -37,11 +36,14 @@ fun AdminDashboardScreen(navController: NavController) {
     var rejectedCount  by remember { mutableStateOf("...") }
     var usersCount by remember { mutableStateOf("...") }
 
-    LaunchedEffect(Unit) {
-        viewModel.getPendingJobsCount   { pendingCount   = it.toString() }
-        viewModel.getApprovedJobsCount  { approvedCount  = it.toString() }
-        viewModel.getRejectedJobsCount  { rejectedCount  = it.toString() }
-        viewModel.getTotalUsersCount    { usersCount = it.toString() }
+    DisposableEffect(Unit) {
+        val registrations = viewModel.listenAdminReport { report ->
+            pendingCount = report.pendingJobs.size.toString()
+            approvedCount = report.approvedJobs.size.toString()
+            rejectedCount = report.rejectedJobs.size.toString()
+            usersCount = report.users.size.toString()
+        }
+        onDispose { registrations.forEach { it.remove() } }
     }
 
     Scaffold(
@@ -152,8 +154,61 @@ fun AdminDashboardScreen(navController: NavController) {
                             onClick = { navController.navigate(Screen.ManageUsers.route) }
                         )
                     }
+
+                    GenerateReportCard(
+                        title = "Generate All Report",
+                        subtext = "Pending, approved, rejected jobs and total users",
+                        icon = Icons.Default.Assessment,
+                        containerColor = Color.White,
+                        iconColor = primaryBlue,
+                        onClick = { navController.navigate(Screen.AdminReport.route) }
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun GenerateReportCard(
+    title: String,
+    subtext: String,
+    icon: ImageVector,
+    containerColor: Color,
+    iconColor: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(86.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE8EEFF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = iconColor)
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(subtext, color = Color.Gray, fontSize = 12.sp)
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
         }
     }
 }

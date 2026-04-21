@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,16 +65,26 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
         if (currentUser == null) {
             viewModel.fetchCurrentUser()
         }
-        viewModel.loadJobs()
+    }
+
+    DisposableEffect(Unit) {
+        val registration = viewModel.listenJobsByStatus("approved") { approvedJobs ->
+            viewModel.jobs.clear()
+            viewModel.jobs.addAll(approvedJobs)
+        }
+        onDispose { registration.remove() }
     }
 
     val studentId = viewModel.getCurrentUserId().orEmpty()
 
-    LaunchedEffect(studentId) {
-        if (studentId.isNotBlank()) {
-            viewModel.getNotificationsForUser(studentId) { notifications ->
+    DisposableEffect(studentId) {
+        if (studentId.isBlank()) {
+            onDispose { }
+        } else {
+            val registration = viewModel.listenNotificationsForUser(studentId) { notifications ->
                 unreadNotificationCount = notifications.count { !it.isRead }
             }
+            onDispose { registration.remove() }
         }
     }
 
