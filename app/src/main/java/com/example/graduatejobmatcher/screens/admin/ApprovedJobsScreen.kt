@@ -20,8 +20,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.WorkOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +59,7 @@ import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 private val ApprovedPrimaryBlue = Color(0xFF3F51B5)
 private val ApprovedGreen = Color(0xFF4CAF50)
+private val ApprovedRejectRed = Color(0xFFE53935)
 private val ApprovedBackgroundGrey = Color(0xFFF5F7FA)
 private val ApprovedCardWhite = Color(0xFFFFFFFF)
 
@@ -85,6 +90,7 @@ fun ApprovedJobsScreen(
     var searchQuery by remember { mutableStateOf("") }
     var sortNewest by remember { mutableStateOf(true) }
     var showSortMenu by remember { mutableStateOf(false) }
+    var jobToReject by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.getApprovedJobs { approvedJobs = it }
@@ -207,7 +213,8 @@ fun ApprovedJobsScreen(
                     items(filtered, key = { it.jobId }) { job ->
                         ApprovedJobCard(
                             job = job,
-                            onClick = { navController.navigate(Screen.JobDetails.passJobId(job.jobId)) }
+                            onClick = { navController.navigate(Screen.JobDetails.passJobId(job.jobId)) },
+                            onReject = { jobToReject = job }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -215,19 +222,52 @@ fun ApprovedJobsScreen(
             }
         }
     }
+
+    jobToReject?.let { job ->
+        AlertDialog(
+            onDismissRequest = { jobToReject = null },
+            title = { Text("Reject approved job?") },
+            text = {
+                Text(
+                    "This will move \"${job.title.ifBlank { "this job" }}\" to rejected jobs and hide it from students."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateJobStatus(job.jobId, "rejected") {
+                            approvedJobs = approvedJobs.filterNot { it.jobId == job.jobId }
+                            jobToReject = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ApprovedRejectRed)
+                ) {
+                    Text("Reject Job")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { jobToReject = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun ApprovedJobCard(
     job: Job,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onReject: () -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = ApprovedCardWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = onClick
+        onClick = { expanded = !expanded }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -334,6 +374,103 @@ private fun ApprovedJobCard(
                     fontWeight = FontWeight.SemiBold
                 )
             }
+
+            if (expanded) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = Color(0xFFF0F0F0))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Job Details",
+                    color = Color.Black,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                DetailRow(
+                    label = "Location",
+                    value = job.location.ifBlank { "Not provided" },
+                    icon = Icons.Default.LocationOn
+                )
+                DetailRow(
+                    label = "Salary",
+                    value = job.salary.ifBlank { "Not provided" },
+                    icon = Icons.Default.CheckCircle
+                )
+                DetailRow(
+                    label = "Required Skills",
+                    value = job.requiredSkills.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "Not provided",
+                    icon = Icons.Default.CheckCircle
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = job.description.ifBlank { "No description provided." },
+                    color = Color.DarkGray,
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TextButton(
+                        onClick = onClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Open Full Details", color = ApprovedPrimaryBlue, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Button(
+                        onClick = onReject,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = ApprovedRejectRed),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Reject")
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun DetailRow(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.Gray,
+            modifier = Modifier.size(15.dp)
+        )
+        Spacer(modifier = Modifier.padding(horizontal = 3.dp))
+        Text(
+            text = "$label: ",
+            color = Color.Gray,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = value,
+            color = Color.DarkGray,
+            fontSize = 12.sp,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

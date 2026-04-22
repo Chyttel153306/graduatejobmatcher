@@ -1,7 +1,9 @@
 package com.example.graduatejobmatcher.screens.employer
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Link
@@ -56,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,6 +70,9 @@ import com.example.graduatejobmatcher.model.User
 import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,8 +86,14 @@ fun ScheduleInterviewScreen(
     var job by remember { mutableStateOf<Job?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    var date by remember { mutableStateOf("June 10, 2024") }
-    var time by remember { mutableStateOf("10:00 AM") }
+    val context = LocalContext.current
+    val calendar = remember { Calendar.getInstance() }
+    var date by remember {
+        mutableStateOf(SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(calendar.time))
+    }
+    var time by remember {
+        mutableStateOf(SimpleDateFormat("h:mm a", Locale.getDefault()).format(calendar.time))
+    }
     var interviewType by remember { mutableStateOf("Online (Google Meet)") }
     var meetingLink by remember { mutableStateOf("meet.google.com/abc-defg-hij") }
     var message by remember { mutableStateOf("") }
@@ -326,8 +337,21 @@ fun ScheduleInterviewScreen(
                 icon = Icons.Default.CalendarMonth,
                 title = "Date",
                 value = date,
-                onValueChange = { date = it },
-                trailingIcon = Icons.Default.CalendarMonth
+                trailingIcon = Icons.Default.CalendarMonth,
+                onClick = {
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, dayOfMonth ->
+                            calendar.set(Calendar.YEAR, year)
+                            calendar.set(Calendar.MONTH, month)
+                            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                            date = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(calendar.time)
+                        },
+                        calendar.get(Calendar.YEAR),
+                        calendar.get(Calendar.MONTH),
+                        calendar.get(Calendar.DAY_OF_MONTH)
+                    ).show()
+                }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -336,8 +360,20 @@ fun ScheduleInterviewScreen(
                 icon = Icons.Default.Schedule,
                 title = "Time",
                 value = time,
-                onValueChange = { time = it },
-                trailingIcon = Icons.Default.KeyboardArrowDown
+                trailingIcon = Icons.Default.KeyboardArrowDown,
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                            calendar.set(Calendar.MINUTE, minute)
+                            time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(calendar.time)
+                        },
+                        calendar.get(Calendar.HOUR_OF_DAY),
+                        calendar.get(Calendar.MINUTE),
+                        false
+                    ).show()
+                }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -346,8 +382,8 @@ fun ScheduleInterviewScreen(
                 icon = Icons.Default.VideoCall,
                 title = "Interview Type",
                 value = interviewType,
-                onValueChange = { interviewType = it },
-                trailingIcon = Icons.Default.KeyboardArrowDown
+                trailingIcon = Icons.Default.KeyboardArrowDown,
+                onValueChange = { interviewType = it }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -359,54 +395,6 @@ fun ScheduleInterviewScreen(
                 onValueChange = { meetingLink = it },
                 hint = "Add the link where the interview will take place"
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionTitle("Interviewers (Optional)")
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = cardBg)
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(softBlue),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Groups,
-                            contentDescription = null,
-                            tint = appBlue
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        SmallAvatar("A")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        SmallAvatar("B")
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Text(
-                        text = "+ Add",
-                        color = appBlue,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -560,11 +548,14 @@ private fun DetailField(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     value: String,
-    onValueChange: (String) -> Unit,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    onValueChange: ((String) -> Unit)? = null,
+    onClick: (() -> Unit)? = null
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
@@ -595,17 +586,26 @@ private fun DetailField(
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                if (onValueChange == null) {
+                    Text(
+                        text = value,
                         color = Color.Black,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 18.sp
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    )
+                } else {
+                    BasicTextField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = Color.Black,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             Icon(
@@ -687,23 +687,5 @@ private fun InputField(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun SmallAvatar(letter: String) {
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFD6D6D6))
-            .border(2.dp, Color.White, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = letter,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
