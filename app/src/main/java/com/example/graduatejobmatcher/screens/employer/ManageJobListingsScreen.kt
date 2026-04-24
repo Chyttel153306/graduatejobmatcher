@@ -40,6 +40,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Job
 import com.example.graduatejobmatcher.navigation.Screen
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -73,6 +76,7 @@ fun ManageJobListingsScreen(
         navController.navigate(Screen.EmployerUpdateJob.passJobId(job.jobId))
     }
 ) {
+    val currentUser by viewModel.currentUser.collectAsState()
     var searchText by remember { mutableStateOf("") }
     var jobs by remember { mutableStateOf<List<Job>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -81,6 +85,12 @@ fun ManageJobListingsScreen(
     val bgColor = Color(0xFFF5F7FB)
     val appBarBlue = Color(0xFF3E73E9)
     val employerId = viewModel.getCurrentUserId().orEmpty()
+
+    LaunchedEffect(currentUser) {
+        if (currentUser == null) {
+            viewModel.fetchCurrentUser()
+        }
+    }
 
     DisposableEffect(employerId) {
         if (employerId.isBlank()) {
@@ -124,7 +134,16 @@ fun ManageJobListingsScreen(
                         )
                     }
                 },
-                actions = {},
+                actions = {
+                    UserAvatar(
+                        user = currentUser,
+                        modifier = Modifier
+                            .padding(end = 16.dp)
+                            .size(34.dp),
+                        backgroundColor = Color.White.copy(alpha = 0.2f),
+                        textSize = 12.sp
+                    )
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = appBarBlue
                 )
@@ -205,6 +224,8 @@ fun ManageJobListingsScreen(
                         items(filteredJobs, key = { it.jobId }) { job ->
                             ManageJobCard(
                                 job = job,
+                                employerName = currentUser?.name.orEmpty(),
+                                employerProfileImageBase64 = currentUser?.profileImageBase64.orEmpty(),
                                 onViewClick = { onViewClick(job) },
                                 onUpdateClick = { onUpdateClick(job) },
                                 onDeleteClick = { jobToDelete = job }
@@ -224,9 +245,12 @@ fun ManageJobListingsScreen(
     if (pendingDelete != null) {
         AlertDialog(
             onDismissRequest = { jobToDelete = null },
-            title = { Text("Delete Job") },
+            containerColor = Color.White,
+            title = { Text("Are you sure you want to delete it?") },
             text = {
-                Text("Delete ${pendingDelete.title.ifBlank { "this job" }}? This will also remove its applications, interviews, and related notifications from Firebase.")
+                Text(
+                    "Deleting ${pendingDelete.title.ifBlank { "this job" }} will also remove its applications, interviews, and related notifications from Firebase."
+                )
             },
             confirmButton = {
                 TextButton(
@@ -236,12 +260,12 @@ fun ManageJobListingsScreen(
                         }
                     }
                 ) {
-                    Text("Delete", color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
+                    Text("Yes", color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { jobToDelete = null }) {
-                    Text("Cancel")
+                    Text("No", color = Color(0xFF356EEA), fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -287,6 +311,8 @@ private fun SearchBox(
 @Composable
 private fun ManageJobCard(
     job: Job,
+    employerName: String,
+    employerProfileImageBase64: String,
     onViewClick: () -> Unit,
     onUpdateClick: () -> Unit,
     onDeleteClick: () -> Unit
@@ -303,7 +329,11 @@ private fun ManageJobCard(
             Row(
                 verticalAlignment = Alignment.Top
             ) {
-                JobBadge(job = job)
+                JobBadge(
+                    job = job,
+                    employerName = employerName,
+                    employerProfileImageBase64 = employerProfileImageBase64
+                )
 
                 Spacer(modifier = Modifier.width(14.dp))
 
@@ -368,18 +398,15 @@ private fun ManageJobCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(
+                    Button(
                         onClick = onViewClick,
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
                         shape = RoundedCornerShape(14.dp),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.5.dp,
-                            Color(0xFF356EEA)
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFF356EEA)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF356EEA),
+                            contentColor = Color.White
                         )
                     ) {
                         Text(
@@ -439,7 +466,11 @@ private fun ManageJobCard(
 }
 
 @Composable
-private fun JobBadge(job: Job) {
+private fun JobBadge(
+    job: Job,
+    employerName: String,
+    employerProfileImageBase64: String
+) {
     val initials = remember(job.title, job.company) {
         val source = job.company.ifBlank { job.title }.trim()
         source
@@ -450,21 +481,14 @@ private fun JobBadge(job: Job) {
             .ifBlank { "J" }
     }
 
-    Box(
-        modifier = Modifier
-            .size(62.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(badgeColorForJob(job)),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = initials,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            maxLines = 1
-        )
-    }
+    UserAvatar(
+        name = employerName.ifBlank { initials },
+        imageBase64 = employerProfileImageBase64,
+        modifier = Modifier.size(62.dp),
+        shape = RoundedCornerShape(16.dp),
+        backgroundColor = badgeColorForJob(job),
+        textSize = 20.sp
+    )
 }
 
 @Composable

@@ -1,9 +1,7 @@
 package com.example.graduatejobmatcher.ui.theme.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,6 +30,7 @@ fun JobCard(
     title: String,
     company: String,
     employerName: String = company,
+    employerProfileImageBase64: String = "",
     modifier: Modifier = Modifier,
     color: Color = Color(0xFF3F51B5),
     onClick: () -> Unit = {}
@@ -40,7 +38,7 @@ fun JobCard(
     Card(
         modifier = modifier
             .clickable(onClick = onClick)
-            .height(180.dp),
+            .height(188.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -56,20 +54,15 @@ fun JobCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Box(
+                UserAvatar(
+                    name = employerName,
+                    imageBase64 = employerProfileImageBase64,
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(color),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = avatarInitials(employerName),
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                        .size(48.dp),
+                    shape = RoundedAvatarShape,
+                    backgroundColor = color,
+                    textSize = 14.sp
+                )
 
                 Icon(
                     imageVector = Icons.Default.MoreVert,
@@ -105,18 +98,5 @@ fun JobCard(
                 color = Color.Black.copy(alpha = 0.8f)
             )
         }
-    }
-}
-
-private fun avatarInitials(name: String): String {
-    val parts = name
-        .trim()
-        .split(Regex("\\s+"))
-        .filter { it.isNotBlank() }
-
-    return when {
-        parts.size >= 2 -> "${parts[0].first()}${parts[1].first()}".uppercase()
-        parts.size == 1 -> parts[0].take(2).uppercase()
-        else -> "NA"
     }
 }

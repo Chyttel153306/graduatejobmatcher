@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Job
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 
@@ -51,6 +54,7 @@ fun EmployerUpdateJobScreen(
     viewModel: AppViewModel,
     jobId: String
 ) {
+    val currentUser by viewModel.currentUser.collectAsState()
     var existingJob by remember { mutableStateOf<Job?>(null) }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -61,9 +65,12 @@ fun EmployerUpdateJobScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val primaryBlue = Color(0xFF3F51B5)
+    val actionBlue = Color(0xFF3F51B5)
 
     LaunchedEffect(jobId) {
+        if (currentUser == null) {
+            viewModel.fetchCurrentUser()
+        }
         viewModel.getJobById(jobId) { job ->
             existingJob = job
             if (job != null) {
@@ -79,7 +86,7 @@ fun EmployerUpdateJobScreen(
     val job = existingJob
     if (job == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = primaryBlue)
+            CircularProgressIndicator(color = actionBlue)
         }
         return
     }
@@ -103,8 +110,18 @@ fun EmployerUpdateJobScreen(
                         )
                     }
                 },
+                actions = {
+                    UserAvatar(
+                        user = currentUser,
+                        modifier = Modifier
+                            .padding(end = 16.dp)
+                            .size(34.dp),
+                        backgroundColor = Color.White.copy(alpha = 0.2f),
+                        textSize = 12.sp
+                    )
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = primaryBlue
+                    containerColor = actionBlue
                 )
             )
         },
@@ -143,7 +160,7 @@ fun EmployerUpdateJobScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(28.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryBlue
+                        containerColor = actionBlue
                     )
                 ) {
                     Text(

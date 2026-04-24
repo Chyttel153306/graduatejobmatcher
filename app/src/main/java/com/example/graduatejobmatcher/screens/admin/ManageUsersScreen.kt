@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.User
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 // ── Colours ──────────────────────────────────────────────────────────────────
@@ -293,20 +294,12 @@ fun UserCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
 
                 // Avatar with initials
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(avatarColor(user.role)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = user.name.take(1).uppercase(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                }
+                UserAvatar(
+                    user = user,
+                    modifier = Modifier.size(52.dp),
+                    backgroundColor = avatarColor(user.role),
+                    textSize = 20.sp
+                )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -400,20 +393,12 @@ fun UserProfileDialog(
         containerColor = Color.White,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(avatarColor(user.role)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = user.name.take(1).uppercase(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                }
+                UserAvatar(
+                    user = user,
+                    modifier = Modifier.size(48.dp),
+                    backgroundColor = avatarColor(user.role),
+                    textSize = 20.sp
+                )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(user.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)

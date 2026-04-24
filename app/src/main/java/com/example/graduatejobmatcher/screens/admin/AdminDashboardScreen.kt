@@ -2,14 +2,45 @@ package com.example.graduatejobmatcher.screens.admin
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.navigation.Screen
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,12 +60,13 @@ fun AdminDashboardScreen(
     navController: NavController,
     viewModel: AppViewModel
 ) {
-    val primaryBlue    = Color(0xFF3F51B5)
+    val primaryBlue = Color(0xFF3F51B5)
     val backgroundColor = Color(0xFFF5F7FA)
+    val currentUser by viewModel.currentUser.collectAsState()
 
-    var pendingCount   by remember { mutableStateOf("...") }
-    var approvedCount  by remember { mutableStateOf("...") }
-    var rejectedCount  by remember { mutableStateOf("...") }
+    var pendingCount by remember { mutableStateOf("...") }
+    var approvedCount by remember { mutableStateOf("...") }
+    var rejectedCount by remember { mutableStateOf("...") }
     var usersCount by remember { mutableStateOf("...") }
 
     DisposableEffect(Unit) {
@@ -56,23 +89,15 @@ fun AdminDashboardScreen(
                     }
                 },
                 actions = {
-                    // ✅ Avatar — tap to go to Profile
-                    Box(
+                    UserAvatar(
+                        user = currentUser,
                         modifier = Modifier
                             .padding(end = 16.dp)
                             .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF9C27B0))
                             .clickable { navController.navigate(Screen.Profile.route) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = "Profile",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                        backgroundColor = Color(0xFF9C27B0),
+                        textSize = 12.sp
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = primaryBlue)
             )

@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Link
@@ -68,7 +68,9 @@ import com.example.graduatejobmatcher.model.InterviewSchedule
 import com.example.graduatejobmatcher.model.Job
 import com.example.graduatejobmatcher.model.User
 import com.example.graduatejobmatcher.navigation.Screen
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -84,7 +86,10 @@ fun ScheduleInterviewScreen(
     var application by remember { mutableStateOf<Application?>(null) }
     var candidate by remember { mutableStateOf<User?>(null) }
     var job by remember { mutableStateOf<Job?>(null) }
+    var existingInterview by remember { mutableStateOf<InterviewSchedule?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var isSaving by remember { mutableStateOf(false) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val calendar = remember { Calendar.getInstance() }
@@ -110,7 +115,7 @@ fun ScheduleInterviewScreen(
                 return@getApplicationById
             }
 
-            var pendingLoads = 2
+            var pendingLoads = 3
 
             fun finishLoad() {
                 pendingLoads--
@@ -132,6 +137,25 @@ fun ScheduleInterviewScreen(
                 job = fetchedJob
                 finishLoad()
             }
+
+            viewModel.getInterviewByApplicationId(app.applicationId) { interview ->
+                existingInterview = interview
+                if (interview != null) {
+                    date = interview.interviewDate
+                    time = interview.interviewTime
+                    interviewType = interview.interviewType
+                    meetingLink = interview.meetingLink
+                    message = interview.message
+                }
+                finishLoad()
+            }
+        }
+    }
+
+    LaunchedEffect(successMessage) {
+        if (successMessage != null) {
+            delay(1200)
+            navController.popBackStack()
         }
     }
 
@@ -141,6 +165,7 @@ fun ScheduleInterviewScreen(
     val softBlue = Color(0xFFF1F5FF)
     val textDark = Color(0xFF1F2937)
     val textGray = Color(0xFF6B7280)
+    val isEditingSchedule = existingInterview != null
 
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -168,7 +193,7 @@ fun ScheduleInterviewScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "Schedule Interview",
+                        text = if (isEditingSchedule) "Edit Interview Schedule" else "Schedule Interview",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -189,337 +214,389 @@ fun ScheduleInterviewScreen(
         }
     ) { innerPadding ->
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(pageBg)
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-                .padding(16.dp)
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = cardBg),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(pageBg)
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(16.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFD9D9D9)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = currentCandidate.name.take(1).uppercase().ifBlank { "C" },
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 28.sp
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            UserAvatar(
+                                user = currentCandidate,
+                                modifier = Modifier.size(78.dp),
+                                backgroundColor = Color(0xFFD9D9D9),
+                                textSize = 28.sp
                             )
+
+                            Spacer(modifier = Modifier.width(14.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = currentCandidate.name.ifBlank { "Candidate" },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 22.sp,
+                                    color = textDark,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text = currentCandidate.degree.ifBlank { "Degree not provided" },
+                                    color = textGray,
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+
+                                Text(
+                                    text = currentCandidate.institution.ifBlank { "Institution not provided" },
+                                    color = textGray,
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.width(14.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                        Column(modifier = Modifier.weight(1f)) {
+                        Button(
+                            onClick = {
+                                navController.navigate(Screen.ApplicantDetails.passApplicationId(currentApplication.applicationId))
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = softBlue,
+                                contentColor = appBlue
+                            )
+                        ) {
                             Text(
-                                text = currentCandidate.name.ifBlank { "Candidate" },
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 22.sp,
-                                color = textDark,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                text = "View Profile",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = softBlue)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BusinessCenter,
+                            contentDescription = null,
+                            tint = appBlue,
+                            modifier = Modifier.size(28.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Position",
+                                color = textGray,
+                                fontSize = 14.sp
                             )
 
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = currentCandidate.degree.ifBlank { "Degree not provided" },
-                                color = textGray,
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                text = currentJob.title.ifBlank { "Untitled Job" },
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp,
+                                color = textDark
                             )
+
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = currentCandidate.institution.ifBlank { "Institution not provided" },
+                                text = buildString {
+                                    append(currentJob.company.ifBlank { "Company not set" })
+                                    append("  •  ")
+                                    append(currentJob.jobType.ifBlank { "Not set" })
+                                    append("  •  ")
+                                    append(currentJob.location.ifBlank { "Location not provided" })
+                                },
                                 color = textGray,
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                fontSize = 15.sp
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = {
-                            navController.navigate(Screen.ApplicantDetails.passApplicationId(currentApplication.applicationId))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = softBlue,
-                            contentColor = appBlue
-                        )
-                    ) {
-                        Text(
-                            text = "View Profile",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = softBlue)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.BusinessCenter,
-                        contentDescription = null,
-                        tint = appBlue,
-                        modifier = Modifier.size(28.dp)
-                    )
+                SectionTitle("Interview Details")
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    Column {
-                        Text(
-                            text = "Position",
-                            color = textGray,
-                            fontSize = 14.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = currentJob.title.ifBlank { "Untitled Job" },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            color = textDark
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = buildString {
-                                append(currentJob.company.ifBlank { "Company not set" })
-                                append("  •  ")
-                                append(currentJob.jobType.ifBlank { "Not set" })
-                                append("  •  ")
-                                append(currentJob.location.ifBlank { "Location not provided" })
+                DetailField(
+                    icon = Icons.Default.CalendarMonth,
+                    title = "Date",
+                    value = date,
+                    trailingIcon = Icons.Default.CalendarMonth,
+                    onClick = {
+                        DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth ->
+                                calendar.set(Calendar.YEAR, year)
+                                calendar.set(Calendar.MONTH, month)
+                                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                date = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(calendar.time)
                             },
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                DetailField(
+                    icon = Icons.Default.Schedule,
+                    title = "Time",
+                    value = time,
+                    trailingIcon = Icons.Default.KeyboardArrowDown,
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hourOfDay, minute ->
+                                calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                calendar.set(Calendar.MINUTE, minute)
+                                time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(calendar.time)
+                            },
+                            calendar.get(Calendar.HOUR_OF_DAY),
+                            calendar.get(Calendar.MINUTE),
+                            false
+                        ).show()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                DetailField(
+                    icon = Icons.Default.VideoCall,
+                    title = "Interview Type",
+                    value = interviewType,
+                    trailingIcon = Icons.Default.KeyboardArrowDown,
+                    onValueChange = { interviewType = it }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                InputField(
+                    icon = Icons.Default.Link,
+                    title = "Meeting Link",
+                    value = meetingLink,
+                    onValueChange = { meetingLink = it },
+                    hint = "Add the link where the interview will take place"
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                SectionTitle("Message to Candidate")
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardBg)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        BasicTextField(
+                            value = message,
+                            onValueChange = {
+                                if (it.length <= 200) message = it
+                            },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = textDark,
+                                lineHeight = 24.sp
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp),
+                            decorationBox = { innerTextField ->
+                                if (message.isEmpty()) {
+                                    Text(
+                                        text = "Type your message here...",
+                                        color = textGray
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "${message.length}/200",
+                            modifier = Modifier.align(Alignment.End),
                             color = textGray,
-                            fontSize = 15.sp
+                            fontSize = 13.sp
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            SectionTitle("Interview Details")
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = softBlue)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = appBlue,
+                            modifier = Modifier.size(22.dp)
+                        )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
 
-            DetailField(
-                icon = Icons.Default.CalendarMonth,
-                title = "Date",
-                value = date,
-                trailingIcon = Icons.Default.CalendarMonth,
-                onClick = {
-                    DatePickerDialog(
-                        context,
-                        { _, year, month, dayOfMonth ->
-                            calendar.set(Calendar.YEAR, year)
-                            calendar.set(Calendar.MONTH, month)
-                            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                            date = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(calendar.time)
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                    ).show()
-                }
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            DetailField(
-                icon = Icons.Default.Schedule,
-                title = "Time",
-                value = time,
-                trailingIcon = Icons.Default.KeyboardArrowDown,
-                onClick = {
-                    TimePickerDialog(
-                        context,
-                        { _, hourOfDay, minute ->
-                            calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                            calendar.set(Calendar.MINUTE, minute)
-                            time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(calendar.time)
-                        },
-                        calendar.get(Calendar.HOUR_OF_DAY),
-                        calendar.get(Calendar.MINUTE),
-                        false
-                    ).show()
-                }
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            DetailField(
-                icon = Icons.Default.VideoCall,
-                title = "Interview Type",
-                value = interviewType,
-                trailingIcon = Icons.Default.KeyboardArrowDown,
-                onValueChange = { interviewType = it }
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            InputField(
-                icon = Icons.Default.Link,
-                title = "Meeting Link",
-                value = meetingLink,
-                onValueChange = { meetingLink = it },
-                hint = "Add the link where the interview will take place"
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionTitle("Message to Candidate")
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = cardBg)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    BasicTextField(
-                        value = message,
-                        onValueChange = {
-                            if (it.length <= 200) message = it
-                        },
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        Text(
+                            text = if (isEditingSchedule) {
+                                "Updating the interview will refresh the existing student notification instead of creating another one."
+                            } else {
+                                "The candidate will receive one notification with the interview details."
+                            },
                             color = textDark,
-                            lineHeight = 24.sp
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        decorationBox = { innerTextField ->
-                            if (message.isEmpty()) {
-                                Text(
-                                    text = "Type your message here...",
-                                    color = textGray
-                                )
-                            }
-                            innerTextField()
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "${message.length}/200",
-                        modifier = Modifier.align(Alignment.End),
-                        color = textGray,
-                        fontSize = 13.sp
-                    )
+                            fontSize = 16.sp,
+                            lineHeight = 22.sp
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = softBlue)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.Top
+                Button(
+                    onClick = {
+                        val employerId = viewModel.getCurrentUserId().orEmpty()
+                        if (employerId.isBlank()) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Unable to identify employer.")
+                            }
+                        } else {
+                            isSaving = true
+                            viewModel.scheduleInterview(
+                                InterviewSchedule(
+                                    interviewId = existingInterview?.interviewId.orEmpty(),
+                                    applicationId = currentApplication.applicationId,
+                                    jobId = currentJob.jobId,
+                                    employerId = employerId,
+                                    studentId = currentApplication.studentId,
+                                    interviewDate = date,
+                                    interviewTime = time,
+                                    interviewType = interviewType,
+                                    meetingLink = meetingLink,
+                                    message = message,
+                                    createdAt = existingInterview?.createdAt
+                                )
+                            ) { success, errorMessage ->
+                                isSaving = false
+                                if (success) {
+                                    successMessage = if (isEditingSchedule) {
+                                        "Successfully updated interview schedule"
+                                    } else {
+                                        "Successfully scheduled interview"
+                                    }
+                                } else {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(errorMessage)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isSaving,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = appBlue,
+                        contentColor = Color.White
+                    )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = appBlue,
-                        modifier = Modifier.size(22.dp)
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null
                     )
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "The candidate will receive a notification with the interview details.",
-                        color = textDark,
-                        fontSize = 16.sp,
-                        lineHeight = 22.sp
+                        text = if (isEditingSchedule) "Edit Schedule Interview" else "Schedule Interview",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = {
-                    val employerId = viewModel.getCurrentUserId().orEmpty()
-                    if (employerId.isBlank()) {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Unable to identify employer.")
-                        }
-                    } else {
-                        viewModel.scheduleInterview(
-                            InterviewSchedule(
-                                applicationId = currentApplication.applicationId,
-                                jobId = currentJob.jobId,
-                                employerId = employerId,
-                                studentId = currentApplication.studentId,
-                                interviewDate = date,
-                                interviewTime = time,
-                                interviewType = interviewType,
-                                meetingLink = meetingLink,
-                                message = message
+            if (isSaving || successMessage != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = 0.96f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (successMessage == null) {
+                            CircularProgressIndicator(color = appBlue)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (isEditingSchedule) "Updating interview schedule..." else "Scheduling interview...",
+                                color = Color(0xFF1F2937),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
                             )
-                        ) {
-                            navController.popBackStack()
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF22C55E),
+                                modifier = Modifier.size(54.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = successMessage.orEmpty(),
+                                color = Color(0xFF1F2937),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = appBlue,
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CalendarMonth,
-                    contentDescription = null
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Schedule Interview",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
+                }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

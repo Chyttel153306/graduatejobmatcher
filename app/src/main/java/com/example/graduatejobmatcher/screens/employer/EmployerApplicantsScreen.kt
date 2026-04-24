@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Job
 import com.example.graduatejobmatcher.model.User
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -33,6 +34,7 @@ data class ApplicantItem(
     val applicationId: String,
     val studentId: String,
     val name: String,
+    val profileImageBase64: String,
     val statusBadge: String,
     val university: String,
     val skills: List<String>,
@@ -99,6 +101,7 @@ fun EmployerApplicantsScreen(navController: NavController, viewModel: AppViewMod
                         applicationId = app.applicationId,
                         studentId     = app.studentId,
                         name          = user?.name?.takeIf { it.isNotBlank() } ?: "Unknown Applicant",
+                        profileImageBase64 = user?.profileImageBase64.orEmpty(),
                         statusBadge   = when (app.status.lowercase()) {
                             "accepted" -> "Accepted"
                             "interview_scheduled" -> "Interview Scheduled"
@@ -375,20 +378,14 @@ fun EmployerApplicantCard(
         Column(modifier = Modifier.padding(16.dp)) {
 
             Row {
-                Surface(
+                UserAvatar(
+                    name = applicant.name,
+                    imageBase64 = applicant.profileImageBase64,
                     modifier = Modifier.size(50.dp),
-                    shape = CircleShape,
-                    color = Color(0xFFE8EFFF)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text       = applicant.name.firstOrNull()?.uppercase() ?: "?",
-                            color      = primaryBlue,
-                            fontWeight = FontWeight.Bold,
-                            fontSize   = 20.sp
-                        )
-                    }
-                }
+                    backgroundColor = Color(0xFFE8EFFF),
+                    contentColor = primaryBlue,
+                    textSize = 20.sp
+                )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

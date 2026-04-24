@@ -1,5 +1,6 @@
 package com.example.graduatejobmatcher.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.mutableStateListOf
@@ -23,6 +24,7 @@ class AppViewModel : ViewModel() {
         email: String,
         password: String,
         role: String,
+        adminCreationPassword: String = "",
         degree: String = "",
         institution: String = "",
         graduationDate: String = "",
@@ -31,7 +33,17 @@ class AppViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                repo.register(name, email, password, role, degree, institution, graduationDate, skills)
+                repo.register(
+                    name = name,
+                    email = email,
+                    password = password,
+                    role = role,
+                    adminCreationPassword = adminCreationPassword,
+                    degree = degree,
+                    institution = institution,
+                    graduationDate = graduationDate,
+                    skills = skills
+                )
                 onResult(true, "")
             } catch (e: Exception) {
                 onResult(false, e.message ?: "Registration failed")
@@ -70,6 +82,7 @@ class AppViewModel : ViewModel() {
         bio: String,
         experience: String,
         skills: List<String>,
+        adminCreationPassword: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         viewModelScope.launch {
@@ -90,6 +103,9 @@ class AppViewModel : ViewModel() {
                 }
 
                 repo.updateCurrentUserProfile(updatedFields)
+                if (existingUser.role == "admin" && adminCreationPassword.isNotBlank()) {
+                    repo.updateAdminCreationPassword(adminCreationPassword)
+                }
                 _currentUser.value = existingUser.copy(
                     name = name.trim(),
                     degree = if (existingUser.role == "student") degree.trim() else existingUser.degree,
@@ -103,6 +119,26 @@ class AppViewModel : ViewModel() {
                 onResult(true, "")
             } catch (e: Exception) {
                 onResult(false, e.message ?: "Profile update failed")
+            }
+        }
+    }
+
+    fun getAdminCreationPassword(onResult: (String) -> Unit) {
+        viewModelScope.launch { onResult(repo.getAdminCreationPassword().orEmpty()) }
+    }
+
+    fun uploadCurrentUserProfileImage(
+        imageBytes: ByteArray,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val existingUser = _currentUser.value ?: throw Exception("User not found")
+                val imageBase64 = repo.uploadCurrentUserProfileImage(imageBytes)
+                _currentUser.value = existingUser.copy(profileImageBase64 = imageBase64)
+                onResult(true, "")
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Image upload failed")
             }
         }
     }
@@ -196,14 +232,25 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch { onResult(repo.getApplicationById(applicationId)) }
     }
 
+    fun getInterviewByApplicationId(applicationId: String, onResult: (InterviewSchedule?) -> Unit) {
+        viewModelScope.launch { onResult(repo.getInterviewByApplicationId(applicationId)) }
+    }
+
     fun updateApplicationStatus(applicationId: String, newStatus: String) {
         viewModelScope.launch { repo.updateApplicationStatus(applicationId, newStatus) }
     }
 
-    fun scheduleInterview(interview: InterviewSchedule, onComplete: () -> Unit = {}) {
+    fun scheduleInterview(
+        interview: InterviewSchedule,
+        onResult: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
         viewModelScope.launch {
-            repo.scheduleInterview(interview)
-            onComplete()
+            try {
+                repo.scheduleInterview(interview)
+                onResult(true, "")
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Interview scheduling failed")
+            }
         }
     }
 

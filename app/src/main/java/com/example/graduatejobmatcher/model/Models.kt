@@ -7,6 +7,7 @@ data class User(
     val name: String = "",
     val email: String = "",
     val role: String = "", // student, employer, admin
+    val profileImageBase64: String = "",
 
     //  Student Info
     val degree: String = "",

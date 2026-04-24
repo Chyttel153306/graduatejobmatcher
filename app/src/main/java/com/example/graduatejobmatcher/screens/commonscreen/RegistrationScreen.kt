@@ -33,6 +33,7 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
     var password        by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var role            by remember { mutableStateOf("student") }
+    var adminCreationPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage    by remember { mutableStateOf("") }
     var isLoading       by remember { mutableStateOf(false) }
@@ -142,6 +143,29 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
             }
 
             // ── Student-only: Education & Skills
+            if (role == "admin") {
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text("Create Admin Password", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    OutlinedTextField(
+                        value = adminCreationPassword,
+                        onValueChange = { adminCreationPassword = it },
+                        visualTransformation = if (passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = fieldColors,
+                        supportingText = {
+                            Text("Required to create an admin account")
+                        }
+                    )
+                }
+            }
+
             if (role == "student") {
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -233,6 +257,10 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
                         errorMessage = "Passwords do not match"
                         return@Button
                     }
+                    if (role == "admin" && adminCreationPassword.isBlank()) {
+                        errorMessage = "Please enter the admin password"
+                        return@Button
+                    }
                     if (role == "student" && degree.isBlank()) {
                         errorMessage = "Please enter your degree"
                         return@Button
@@ -244,6 +272,7 @@ fun RegistrationScreen(navController: NavController, viewModel: AppViewModel) {
                         email           = email,
                         password        = password,
                         role            = role,
+                        adminCreationPassword = if (role == "admin") adminCreationPassword else "",
                         degree          = if (role == "student") degree else "",
                         institution     = if (role == "student") institution else "",
                         graduationDate  = if (role == "student") graduationDate else "",

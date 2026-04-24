@@ -66,6 +66,7 @@ import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Application
 import com.example.graduatejobmatcher.model.User
 import com.example.graduatejobmatcher.navigation.Screen
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -211,6 +212,7 @@ fun ViewApplicantsScreen(
                 Column(modifier = Modifier.padding(18.dp)) {
                     ApplicantHeader(
                         applicantName = applicantName,
+                        applicantProfileImageBase64 = user?.profileImageBase64.orEmpty(),
                         applicantDegree = applicantDegree,
                         applicantInstitution = applicantInstitution
                     )
@@ -347,6 +349,7 @@ fun ViewApplicantsScreen(
 @Composable
 private fun ApplicantHeader(
     applicantName: String,
+    applicantProfileImageBase64: String,
     applicantDegree: String,
     applicantInstitution: String
 ) {
@@ -354,20 +357,13 @@ private fun ApplicantHeader(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF3D73E6)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = applicantName.take(1).uppercase(),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
+        UserAvatar(
+            name = applicantName,
+            imageBase64 = applicantProfileImageBase64,
+            modifier = Modifier.size(72.dp),
+            backgroundColor = Color(0xFF3D73E6),
+            textSize = 28.sp
+        )
 
         Spacer(modifier = Modifier.width(14.dp))
 

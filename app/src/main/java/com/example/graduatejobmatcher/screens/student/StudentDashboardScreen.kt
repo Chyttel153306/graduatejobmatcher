@@ -49,6 +49,7 @@ import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.User
 import com.example.graduatejobmatcher.navigation.Screen
 import com.example.graduatejobmatcher.ui.theme.components.JobCard
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @Composable
@@ -156,20 +157,12 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = userInitials(currentUser?.name),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-                        }
+                        UserAvatar(
+                            user = currentUser,
+                            modifier = Modifier.size(40.dp),
+                            backgroundColor = Color.White.copy(alpha = 0.2f),
+                            textSize = 14.sp
+                        )
 
                         Box {
                             IconButton(
@@ -248,6 +241,7 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                             title = job.title,
                             company = job.company,
                             employerName = employerName,
+                            employerProfileImageBase64 = employerProfiles[job.employerId]?.profileImageBase64.orEmpty(),
                             modifier = Modifier.fillMaxWidth(),
                             color = primaryBlue,
                             onClick = {
@@ -258,19 +252,5 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                 }
             }
         }
-    }
-}
-
-private fun userInitials(name: String?): String {
-    val parts = name
-        .orEmpty()
-        .trim()
-        .split(Regex("\\s+"))
-        .filter { it.isNotBlank() }
-
-    return when {
-        parts.size >= 2 -> "${parts[0].first()}${parts[1].first()}".uppercase()
-        parts.size == 1 -> parts[0].first().uppercase()
-        else -> "U"
     }
 }

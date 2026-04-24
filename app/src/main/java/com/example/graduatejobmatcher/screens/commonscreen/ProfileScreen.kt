@@ -1,5 +1,11 @@
 package com.example.graduatejobmatcher.screens.commonscreen
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import java.io.ByteArrayOutputStream
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
@@ -39,6 +46,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -59,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,19 +75,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.navigation.Screen
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
     val currentUser by viewModel.currentUser.collectAsState()
+    val context = LocalContext.current
     val primaryBlue = Color(0xFF3F51B5)
     val role = currentUser?.role?.trim()?.lowercase() ?: ""
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     var showEditDialog by remember { mutableStateOf(false) }
+    var isUploadingPhoto by remember { mutableStateOf(false) }
     var fullName by remember { mutableStateOf("") }
     var degree by remember { mutableStateOf("") }
     var institution by remember { mutableStateOf("") }
@@ -87,8 +101,43 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
     var bio by remember { mutableStateOf("") }
     var experience by remember { mutableStateOf("") }
     var skillsInput by remember { mutableStateOf("") }
+    var adminCreationPassword by remember { mutableStateOf("") }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { selectedImageUri: Uri? ->
+        if (selectedImageUri == null) return@rememberLauncherForActivityResult
+
+        isUploadingPhoto = true
+        coroutineScope.launch {
+            val imageBytes = withContext(Dispatchers.IO) {
+                context.compressProfileImageForFirestore(selectedImageUri)
+            }
+
+            if (imageBytes == null || imageBytes.isEmpty()) {
+                isUploadingPhoto = false
+                snackbarHostState.showSnackbar("Unable to read the selected image")
+                return@launch
+            }
+
+            viewModel.uploadCurrentUserProfileImage(imageBytes) { success, message ->
+                isUploadingPhoto = false
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        if (success) "Profile photo updated successfully"
+                        else message
+                    )
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) { viewModel.fetchCurrentUser() }
+    LaunchedEffect(role) {
+        if (role == "admin") {
+            viewModel.getAdminCreationPassword { adminCreationPassword = it }
+        }
+    }
 
     fun startEditing() {
         currentUser?.let { user ->
@@ -100,6 +149,9 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
             bio = user.bio
             experience = user.experience
             skillsInput = user.skills.joinToString(", ")
+            if (user.role == "admin") {
+                viewModel.getAdminCreationPassword { adminCreationPassword = it }
+            }
             showEditDialog = true
         }
     }
@@ -119,7 +171,7 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
                     }
                 },
                 actions = {
-                    if (role == "student" || role == "employer") {
+                    if (role == "student" || role == "employer" || role == "admin") {
                         IconButton(onClick = { startEditing() }) {
                             Icon(
                                 Icons.Default.Edit,
@@ -159,7 +211,7 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp),
+                    .height(210.dp),
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Box(
@@ -170,20 +222,45 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
                         .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
                         .background(primaryBlue)
                 )
-                Box(
-                    modifier = Modifier
-                        .size(110.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFBBDEFB))
-                        .border(4.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = currentUser?.name?.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                        fontSize = 42.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = primaryBlue
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    UserAvatar(
+                        user = currentUser,
+                        modifier = Modifier
+                            .size(118.dp)
+                            .border(4.dp, Color.White, CircleShape),
+                        backgroundColor = Color(0xFFBBDEFB),
+                        contentColor = primaryBlue,
+                        textSize = 34.sp
                     )
+
+                    Surface(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        shape = CircleShape,
+                        color = Color.White,
+                        tonalElevation = 3.dp,
+                        shadowElevation = 3.dp,
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(34.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isUploadingPhoto) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = primaryBlue
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Upload profile photo",
+                                    tint = primaryBlue,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -203,6 +280,15 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
                 textAlign = TextAlign.Center,
                 color = Color.Gray,
                 fontSize = 14.sp
+            )
+            Text(
+                text = if (isUploadingPhoto) "Uploading photo..." else "Tap the camera icon to change your photo",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                textAlign = TextAlign.Center,
+                color = if (isUploadingPhoto) primaryBlue else Color.Gray,
+                fontSize = 12.sp
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -314,6 +400,7 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
                         ProfileInfoRow("Email", currentUser?.email ?: "-")
                         ProfileInfoRow("Admin ID", currentUser?.userId ?: "-")
                         ProfileInfoRow("Access Level", "Full Access")
+                        ProfileInfoRow("Create Admin Password", adminCreationPassword.maskedPasswordOrDash())
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     ProfileCard {
@@ -386,6 +473,8 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
                 onExperienceChange = { experience = it },
                 skillsInput = skillsInput,
                 onSkillsInputChange = { skillsInput = it },
+                adminCreationPassword = adminCreationPassword,
+                onAdminCreationPasswordChange = { adminCreationPassword = it },
                 onDismiss = { showEditDialog = false },
                 onSave = {
                     val parsedSkills = skillsInput
@@ -402,7 +491,8 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
                         location = location,
                         bio = bio,
                         experience = experience,
-                        skills = parsedSkills
+                        skills = parsedSkills,
+                        adminCreationPassword = adminCreationPassword
                     ) { success, message ->
                         if (success) {
                             showEditDialog = false
@@ -422,6 +512,50 @@ fun ProfileScreen(navController: NavController, viewModel: AppViewModel) {
 }
 
 private fun String?.ifBlankOrDash(): String = if (this.isNullOrBlank()) "-" else this
+private fun String.maskedPasswordOrDash(): String = if (isBlank()) "-" else "•".repeat(length.coerceAtLeast(8))
+
+private fun android.content.Context.compressProfileImageForFirestore(uri: Uri): ByteArray? {
+    val originalBitmap = contentResolver.openInputStream(uri)?.use { inputStream ->
+        BitmapFactory.decodeStream(inputStream)
+    } ?: return null
+
+    val maxDimension = 360
+    val width = originalBitmap.width
+    val height = originalBitmap.height
+    val scale = minOf(
+        1f,
+        maxDimension.toFloat() / width.toFloat(),
+        maxDimension.toFloat() / height.toFloat()
+    )
+
+    val resizedBitmap = if (scale < 1f) {
+        Bitmap.createScaledBitmap(
+            originalBitmap,
+            (width * scale).toInt().coerceAtLeast(1),
+            (height * scale).toInt().coerceAtLeast(1),
+            true
+        )
+    } else {
+        originalBitmap
+    }
+
+    var quality = 85
+    var compressedBytes: ByteArray
+
+    do {
+        val outputStream = ByteArrayOutputStream()
+        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        compressedBytes = outputStream.toByteArray()
+        quality -= 10
+    } while (compressedBytes.size > 180_000 && quality >= 45)
+
+    if (resizedBitmap !== originalBitmap) {
+        resizedBitmap.recycle()
+    }
+    originalBitmap.recycle()
+
+    return compressedBytes
+}
 
 @Composable
 fun ProfileCard(content: @Composable ColumnScope.() -> Unit) {
@@ -516,11 +650,14 @@ private fun EditProfileDialog(
     onExperienceChange: (String) -> Unit,
     skillsInput: String,
     onSkillsInputChange: (String) -> Unit,
+    adminCreationPassword: String,
+    onAdminCreationPasswordChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Color.White,
         title = { Text("Edit Profile") },
         text = {
             Column(
@@ -534,62 +671,102 @@ private fun EditProfileDialog(
                     onValueChange = onFullNameChange,
                     label = { Text("Full Name") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
                 )
                 OutlinedTextField(
                     value = location,
                     onValueChange = onLocationChange,
                     label = { Text("Location") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
                 )
+                if (role == "admin") {
+                    OutlinedTextField(
+                        value = adminCreationPassword,
+                        onValueChange = onAdminCreationPasswordChange,
+                        label = { Text("Create Admin Password") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        )
+                    )
+                }
                 if (role == "student") {
                     OutlinedTextField(
                         value = degree,
                         onValueChange = onDegreeChange,
                         label = { Text("Degree") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        )
                     )
                     OutlinedTextField(
                         value = institution,
                         onValueChange = onInstitutionChange,
                         label = { Text("Institution") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        )
                     )
                     OutlinedTextField(
                         value = graduationDate,
                         onValueChange = onGraduationDateChange,
                         label = { Text("Graduation Date") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        )
                     )
                 }
                 OutlinedTextField(
                     value = experience,
                     onValueChange = onExperienceChange,
                     label = { Text("Experience") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
                 )
                 OutlinedTextField(
                     value = bio,
                     onValueChange = onBioChange,
                     label = { Text("Bio") },
                     minLines = 3,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
                 )
                 OutlinedTextField(
                     value = skillsInput,
                     onValueChange = onSkillsInputChange,
                     label = { Text("Skills") },
                     supportingText = { Text("Separate skills with commas") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = "Only your personal details can be changed here. Email, role, and user ID are locked.",
-                    fontSize = 12.sp,
-                    color = Color.Gray
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
                 )
             }
         },

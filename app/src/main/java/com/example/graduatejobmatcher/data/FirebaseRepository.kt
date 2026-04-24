@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.example.graduatejobmatcher.model.*
+import android.util.Base64
 import kotlinx.coroutines.tasks.await
 import java.util.*
 
@@ -11,6 +12,7 @@ class FirebaseRepository {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+    private val adminConfigDoc = db.collection("config").document("admin")
 
     // ---------- AUTH ----------
 
@@ -20,11 +22,39 @@ class FirebaseRepository {
         email: String,
         password: String,
         role: String,
+        adminCreationPassword: String = "",
         degree: String = "",
         institution: String = "",
         graduationDate: String = "",
         skills: List<String> = emptyList()
     ) {
+        val trimmedRole = role.trim().lowercase()
+        val normalizedAdminPassword = adminCreationPassword.trim()
+        var shouldSeedAdminPassword = false
+
+        if (trimmedRole == "admin") {
+            val existingAdmins = db.collection("users")
+                .whereEqualTo("role", "admin")
+                .limit(1)
+                .get()
+                .await()
+            val configuredPassword = getAdminCreationPassword().orEmpty()
+
+            if (existingAdmins.isEmpty) {
+                if (normalizedAdminPassword.isBlank()) {
+                    throw Exception("Create Admin Password is required.")
+                }
+                shouldSeedAdminPassword = true
+            } else {
+                if (configuredPassword.isBlank()) {
+                    throw Exception("Admin password is not configured.")
+                }
+                if (normalizedAdminPassword != configuredPassword) {
+                    throw Exception("Incorrect admin password.")
+                }
+            }
+        }
+
         auth.createUserWithEmailAndPassword(email, password).await()
         val uid = auth.uid ?: throw Exception("User creation failed")
 
@@ -32,13 +62,22 @@ class FirebaseRepository {
             userId = uid,
             name = name,
             email = email,
-            role = role,
+            role = trimmedRole,
             degree = degree,
             institution = institution,
             graduationDate = graduationDate,
             skills = skills
         )
         db.collection("users").document(uid).set(user).await()
+
+        if (trimmedRole == "admin" && shouldSeedAdminPassword) {
+            adminConfigDoc.set(
+                mapOf(
+                    "createAdminPassword" to normalizedAdminPassword,
+                    "updatedAt" to Date()
+                )
+            ).await()
+        }
     }
 
     suspend fun login(email: String, password: String): User {
@@ -57,6 +96,38 @@ class FirebaseRepository {
     suspend fun updateCurrentUserProfile(updatedFields: Map<String, Any>) {
         val uid = auth.uid ?: throw Exception("User not logged in")
         db.collection("users").document(uid).update(updatedFields).await()
+    }
+
+    suspend fun getAdminCreationPassword(): String? {
+        return try {
+            adminConfigDoc.get().await().getString("createAdminPassword")
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun updateAdminCreationPassword(newPassword: String) {
+        val uid = auth.uid ?: throw Exception("User not logged in")
+        val currentUser = getCurrentUser() ?: throw Exception("User not found")
+        if (currentUser.role != "admin") {
+            throw Exception("Only admins can update the admin password.")
+        }
+        adminConfigDoc.set(
+            mapOf(
+                "createAdminPassword" to newPassword.trim(),
+                "updatedAt" to Date(),
+                "updatedBy" to uid
+            )
+        ).await()
+    }
+
+    suspend fun uploadCurrentUserProfileImage(imageBytes: ByteArray): String {
+        val uid = auth.uid ?: throw Exception("User not logged in")
+        val encodedImage = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
+        db.collection("users").document(uid)
+            .update("profileImageBase64", encodedImage)
+            .await()
+        return encodedImage
     }
 
     fun getCurrentUserId(): String? = auth.uid
@@ -207,15 +278,30 @@ class FirebaseRepository {
         } catch (_: Exception) { null }
     }
 
+    suspend fun getInterviewByApplicationId(applicationId: String): InterviewSchedule? {
+        return try {
+            db.collection("interviews")
+                .whereEqualTo("applicationId", applicationId)
+                .get()
+                .await()
+                .toObjects(InterviewSchedule::class.java)
+                .firstOrNull()
+        } catch (_: Exception) { null }
+    }
+
     suspend fun updateApplicationStatus(applicationId: String, newStatus: String) {
         db.collection("applications").document(applicationId).update("status", newStatus).await()
     }
 
     suspend fun scheduleInterview(interview: InterviewSchedule) {
-        val interviewId = db.collection("interviews").document().id
+        val existingInterview = getInterviewByApplicationId(interview.applicationId)
+        val interviewId = existingInterview?.interviewId
+            ?.takeIf { it.isNotBlank() }
+            ?: db.collection("interviews").document().id
+        val now = Date()
         val interviewWithId = interview.copy(
             interviewId = interviewId,
-            createdAt = Date()
+            createdAt = existingInterview?.createdAt ?: now
         )
         val job = getJobById(interview.jobId)
         val employer = getUserById(interview.employerId)
@@ -225,13 +311,21 @@ class FirebaseRepository {
             .update("status", "interview_scheduled")
             .await()
 
-        val notificationId = db.collection("notifications").document().id
+        val existingNotifications = db.collection("notifications")
+            .whereEqualTo("applicationId", interview.applicationId)
+            .whereEqualTo("userId", interview.studentId)
+            .whereEqualTo("type", "interview_scheduled")
+            .get()
+            .await()
+
+        val primaryNotificationDoc = existingNotifications.documents.firstOrNull()
+        val notificationId = primaryNotificationDoc?.id ?: db.collection("notifications").document().id
         val notification = AppNotification(
             notificationId = notificationId,
             userId = interview.studentId,
-            title = "Interview Scheduled",
+            title = if (primaryNotificationDoc == null) "Interview Scheduled" else "Interview Updated",
             message = "Your interview for ${job?.title?.ifBlank { "your application" } ?: "your application"} is set for ${interview.interviewDate} at ${interview.interviewTime}.",
-            createdAt = Date(),
+            createdAt = now,
             isRead = false,
             type = "interview_scheduled",
             applicationId = interview.applicationId,
@@ -247,7 +341,13 @@ class FirebaseRepository {
             meetingLink = interview.meetingLink,
             detailMessage = interview.message
         )
-        db.collection("notifications").document(notificationId).set(notification).await()
+
+        val batch = db.batch()
+        batch.set(db.collection("notifications").document(notificationId), notification)
+        existingNotifications.documents
+            .drop(1)
+            .forEach { batch.delete(it.reference) }
+        batch.commit().await()
     }
 
     suspend fun getNotificationsForUser(userId: String): List<AppNotification> {
