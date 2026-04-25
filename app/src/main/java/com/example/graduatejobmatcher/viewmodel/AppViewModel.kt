@@ -374,6 +374,10 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch { onResult(repo.getUserById(userId)) }
     }
 
+    fun listenUserById(userId: String, onResult: (User?) -> Unit): ListenerRegistration {
+        return repo.listenUserById(userId, onResult)
+    }
+
     fun updateUserRole(userId: String, newRole: String) {
         viewModelScope.launch { repo.updateUserRole(userId, newRole) }
     }

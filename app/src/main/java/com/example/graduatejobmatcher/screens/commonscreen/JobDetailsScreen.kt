@@ -20,6 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.graduatejobmatcher.model.Application
+import com.example.graduatejobmatcher.model.Job
+import com.example.graduatejobmatcher.model.User
+import com.example.graduatejobmatcher.ui.theme.components.RoundedAvatarShape
+import com.example.graduatejobmatcher.ui.theme.components.UserAvatar
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @Composable
@@ -29,10 +33,11 @@ fun JobDetailsScreen(
     jobId: String
 ) {
     val currentUser by viewModel.currentUser.collectAsState()
-    // Find job from the ViewModel's live data (real data)
-    val job = viewModel.jobs.find { it.jobId == jobId }
+    var job by remember(jobId) { mutableStateOf<Job?>(viewModel.jobs.find { it.jobId == jobId }) }
     val primaryBlue = Color(0xFF3F51B5)
     var existingApplication by remember { mutableStateOf<Application?>(null) }
+    var employer by remember { mutableStateOf<User?>(null) }
+    val isStudent = currentUser?.role == "student"
 
     LaunchedEffect(Unit) {
         if (currentUser == null) {
@@ -40,9 +45,17 @@ fun JobDetailsScreen(
         }
     }
 
-    LaunchedEffect(jobId, currentUser?.userId) {
+    LaunchedEffect(jobId) {
+        if (job == null) {
+            viewModel.getJobById(jobId) { fetchedJob ->
+                job = fetchedJob
+            }
+        }
+    }
+
+    LaunchedEffect(jobId, currentUser?.userId, isStudent) {
         val studentId = currentUser?.userId.orEmpty()
-        if (studentId.isBlank()) {
+        if (!isStudent || studentId.isBlank()) {
             existingApplication = null
         } else {
             viewModel.getApplicationForJobAndStudent(jobId, studentId) { application ->
@@ -51,36 +64,54 @@ fun JobDetailsScreen(
         }
     }
 
-    if (job == null) {
+    DisposableEffect(job?.employerId) {
+        val employerId = job?.employerId.orEmpty()
+        if (employerId.isBlank()) {
+            employer = null
+            onDispose { }
+        } else {
+            val registration = viewModel.listenUserById(employerId) { updatedEmployer ->
+                employer = updatedEmployer
+            }
+            onDispose { registration.remove() }
+        }
+    }
+
+    val currentJob = job
+    val employerName = employer?.name?.ifBlank { null } ?: currentJob?.company.orEmpty()
+    val employerImageBase64 = employer?.profileImageBase64.orEmpty()
+
+    if (currentJob == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Job not found")
+            CircularProgressIndicator(color = primaryBlue)
         }
         return
     }
 
     Scaffold(
         bottomBar = {
-            // White background for bottom bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-                    .padding(16.dp)
-            ) {
-                Button(
-                    onClick = { navController.navigate("apply_job/${job.jobId}") },
+            if (isStudent) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
+                        .background(Color.White)
+                        .padding(16.dp)
                 ) {
-                    Text(
-                        text = if (existingApplication != null) "Edit Application" else "Apply Now",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White   // white text on blue button
-                    )
+                    Button(
+                        onClick = { navController.navigate("apply_job/${currentJob.jobId}") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
+                    ) {
+                        Text(
+                            text = if (existingApplication != null) "Edit Application" else "Apply Now",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
@@ -121,11 +152,16 @@ fun JobDetailsScreen(
                     elevation = CardDefaults.cardElevation(4.dp)
                 ) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = job.company.take(1).uppercase(),
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = primaryBlue
+                        UserAvatar(
+                            name = employerName.ifBlank { currentJob.company },
+                            imageBase64 = employerImageBase64,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp),
+                            shape = RoundedAvatarShape,
+                            backgroundColor = Color(0xFFE8EAF6),
+                            contentColor = primaryBlue,
+                            textSize = 32.sp
                         )
                     }
                 }
@@ -139,9 +175,16 @@ fun JobDetailsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = job.title,
+                    text = currentJob.title,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = employerName.ifBlank { "Employer" },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -149,7 +192,7 @@ fun JobDetailsScreen(
                 // Location – black text
                 InfoRow(
                     icon = Icons.Default.LocationOn,
-                    text = job.location.ifBlank { "Location not specified" },
+                    text = currentJob.location.ifBlank { "Location not specified" },
                     textColor = Color.Black
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -157,7 +200,7 @@ fun JobDetailsScreen(
                 // Salary – real field from job
                 InfoRow(
                     icon = Icons.Default.MonetizationOn,
-                    text = job.salary.ifBlank { "Salary not specified" },
+                    text = currentJob.salary.ifBlank { "Salary not specified" },
                     textColor = Color.Black
                 )
             }
@@ -174,7 +217,7 @@ fun JobDetailsScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = job.description.ifBlank { "No description provided." },
+                    text = currentJob.description.ifBlank { "No description provided." },
                     color = Color.Black,
                     lineHeight = 22.sp
                 )
@@ -190,7 +233,7 @@ fun JobDetailsScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                if (job.requiredSkills.isEmpty()) {
+                if (currentJob.requiredSkills.isEmpty()) {
                     Text(
                         text = "No specific skills listed.",
                         color = Color.Black,
@@ -201,7 +244,7 @@ fun JobDetailsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        job.requiredSkills.forEach { skill ->
+                        currentJob.requiredSkills.forEach { skill ->
                             DetailSkillChip(skill)
                         }
                     }

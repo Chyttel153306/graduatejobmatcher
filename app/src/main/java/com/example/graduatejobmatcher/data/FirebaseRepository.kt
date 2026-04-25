@@ -140,6 +140,14 @@ class FirebaseRepository {
         } catch (_: Exception) { null }
     }
 
+    fun listenUserById(userId: String, onResult: (User?) -> Unit): ListenerRegistration {
+        return db.collection("users")
+            .document(userId)
+            .addSnapshotListener { snapshot, _ ->
+                onResult(snapshot?.toObject(User::class.java))
+            }
+    }
+
     // ---------- JOB METHODS ----------
     suspend fun postJob(job: Job) {
         val id = db.collection("jobs").document().id
