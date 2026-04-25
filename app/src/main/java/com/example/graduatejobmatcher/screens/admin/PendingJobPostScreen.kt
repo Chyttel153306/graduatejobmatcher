@@ -104,17 +104,14 @@ fun PendingJobsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                placeholder = { Text("Search jobs or companies...", color = Color.Gray, fontSize = 14.sp) },
+                placeholder = { Text("Search jobs or companies...", color = Color.Black, fontSize = 14.sp) },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
-                },
-                trailingIcon = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = PrimaryBlue)
-                    }
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black)
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
                     focusedBorderColor = PrimaryBlue,
                     unfocusedBorderColor = Color.LightGray,
                     focusedContainerColor = CardWhite,
@@ -144,11 +141,6 @@ fun PendingJobsScreen(
                             fontSize = 13.sp,
                             color = PrimaryBlue,
                             fontWeight = FontWeight.SemiBold
-                        )
-                        Icon(
-                            Icons.Default.ArrowDropDown,
-                            contentDescription = null,
-                            tint = PrimaryBlue
                         )
                     }
                     DropdownMenu(
@@ -266,12 +258,12 @@ fun PendingJobCard(
 
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = Color(0xFFE8EAF6)
+                    color = Color(0xFFE8F5E9)
                 ) {
                     Text(
                         text = job.jobType.ifBlank { "Full-time" },
                         fontSize = 11.sp,
-                        color = PrimaryBlue,
+                        color = ApproveGreen,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )

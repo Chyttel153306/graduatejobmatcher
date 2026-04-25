@@ -38,7 +38,7 @@ fun JobCard(
     Card(
         modifier = modifier
             .clickable(onClick = onClick)
-            .height(188.dp),
+            .height(204.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -58,10 +58,10 @@ fun JobCard(
                     name = employerName,
                     imageBase64 = employerProfileImageBase64,
                     modifier = Modifier
-                        .size(48.dp),
+                        .size(58.dp),
                     shape = RoundedAvatarShape,
                     backgroundColor = color,
-                    textSize = 14.sp
+                    textSize = 17.sp
                 )
 
                 Icon(

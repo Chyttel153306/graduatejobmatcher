@@ -116,14 +116,16 @@ fun ManageUsersScreen(navController: NavController, viewModel: AppViewModel) {
                         modifier = Modifier.size(40.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Platform Users",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontSize = 15.sp,
+                            color = Color.Black,
+                            maxLines = 1
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier.padding(top = 4.dp)
                         ) {
                             SummaryChip(
@@ -153,9 +155,9 @@ fun ManageUsersScreen(navController: NavController, viewModel: AppViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                placeholder = { Text("Search users...", color = Color.Gray) },
+                placeholder = { Text("Search users...", color = Color.Black) },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black)
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -166,6 +168,8 @@ fun ManageUsersScreen(navController: NavController, viewModel: AppViewModel) {
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
                     focusedBorderColor = PrimaryBlue,
                     unfocusedBorderColor = Color.LightGray,
                     focusedContainerColor = Color.White,
@@ -196,8 +200,8 @@ fun ManageUsersScreen(navController: NavController, viewModel: AppViewModel) {
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = ChipSelected,
                             selectedLabelColor = Color.White,
-                            containerColor = ChipUnselected,
-                            labelColor = Color.DarkGray
+                            containerColor = Color.White,
+                            labelColor = Color.Black
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
@@ -359,8 +363,9 @@ fun UserCard(
                         onClick = onToggleRole,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (user.role == "student") EmployerColor else StudentColor
+                    colors = ButtonDefaults.buttonColors(
+                            containerColor = if (user.role == "student") EmployerColor else StudentColor,
+                            contentColor = Color.White
                         )
                     ) {
                         Icon(
@@ -401,7 +406,7 @@ fun UserProfileDialog(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(user.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(user.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
                     RoleBadge(role = user.role)
                 }
             }
@@ -438,7 +443,7 @@ fun UserProfileDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = Color.Gray)
+                Text("Close", color = Color.Black)
             }
         }
     )
@@ -497,8 +502,8 @@ private fun ProfileRow(
         Icon(icon, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
         Column {
-            Text(label, fontSize = 11.sp, color = Color.Gray)
-            Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(label, fontSize = 11.sp, color = Color.Black)
+            Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.Black)
         }
     }
 }

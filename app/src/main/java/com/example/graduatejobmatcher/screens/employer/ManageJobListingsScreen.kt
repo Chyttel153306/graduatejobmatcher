@@ -246,10 +246,11 @@ fun ManageJobListingsScreen(
         AlertDialog(
             onDismissRequest = { jobToDelete = null },
             containerColor = Color.White,
-            title = { Text("Are you sure you want to delete it?") },
+            title = { Text("Are you sure you want to delete it?", color = Color.Black) },
             text = {
                 Text(
-                    "Deleting ${pendingDelete.title.ifBlank { "this job" }} will also remove its applications, interviews, and related notifications from Firebase."
+                    "Deleting ${pendingDelete.title.ifBlank { "this job" }} will also remove its applications, interviews, and related notifications from Firebase.",
+                    color = Color.Black
                 )
             },
             confirmButton = {

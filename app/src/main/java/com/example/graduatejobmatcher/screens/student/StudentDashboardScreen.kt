@@ -216,11 +216,13 @@ fun StudentDashboardScreen(navController: NavController, viewModel: AppViewModel
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search Job") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    placeholder = { Text("Search Job", color = Color.Black) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White
                     )

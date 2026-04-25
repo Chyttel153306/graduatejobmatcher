@@ -137,12 +137,14 @@ fun ApprovedJobsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                placeholder = { Text("Search jobs or companies...", color = Color.Gray, fontSize = 14.sp) },
+                placeholder = { Text("Search jobs or companies...", color = Color.Black, fontSize = 14.sp) },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black)
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
                     focusedBorderColor = ApprovedPrimaryBlue,
                     unfocusedBorderColor = Color.LightGray,
                     focusedContainerColor = ApprovedCardWhite,

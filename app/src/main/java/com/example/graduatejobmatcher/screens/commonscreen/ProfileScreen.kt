@@ -655,10 +655,19 @@ private fun EditProfileDialog(
     onDismiss: () -> Unit,
     onSave: () -> Unit
 ) {
+    val blackTextFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Color.Black,
+        unfocusedTextColor = Color.Black,
+        focusedLabelColor = Color.Black,
+        unfocusedLabelColor = Color.Black,
+        focusedContainerColor = Color.White,
+        unfocusedContainerColor = Color.White
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color.White,
-        title = { Text("Edit Profile") },
+        title = { Text("Edit Profile", color = Color.Black) },
         text = {
             Column(
                 modifier = Modifier
@@ -672,10 +681,7 @@ private fun EditProfileDialog(
                     label = { Text("Full Name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
+                    colors = blackTextFieldColors
                 )
                 OutlinedTextField(
                     value = location,
@@ -683,10 +689,7 @@ private fun EditProfileDialog(
                     label = { Text("Location") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
+                    colors = blackTextFieldColors
                 )
                 if (role == "admin") {
                     OutlinedTextField(
@@ -695,10 +698,7 @@ private fun EditProfileDialog(
                         label = { Text("Create Admin Password") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
+                        colors = blackTextFieldColors
                     )
                 }
                 if (role == "student") {
@@ -708,10 +708,7 @@ private fun EditProfileDialog(
                         label = { Text("Degree") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
+                        colors = blackTextFieldColors
                     )
                     OutlinedTextField(
                         value = institution,
@@ -719,10 +716,7 @@ private fun EditProfileDialog(
                         label = { Text("Institution") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
+                        colors = blackTextFieldColors
                     )
                     OutlinedTextField(
                         value = graduationDate,
@@ -730,10 +724,7 @@ private fun EditProfileDialog(
                         label = { Text("Graduation Date") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
+                        colors = blackTextFieldColors
                     )
                 }
                 OutlinedTextField(
@@ -741,10 +732,7 @@ private fun EditProfileDialog(
                     onValueChange = onExperienceChange,
                     label = { Text("Experience") },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
+                    colors = blackTextFieldColors
                 )
                 OutlinedTextField(
                     value = bio,
@@ -752,32 +740,26 @@ private fun EditProfileDialog(
                     label = { Text("Bio") },
                     minLines = 3,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
+                    colors = blackTextFieldColors
                 )
                 OutlinedTextField(
                     value = skillsInput,
                     onValueChange = onSkillsInputChange,
                     label = { Text("Skills") },
-                    supportingText = { Text("Separate skills with commas") },
+                    supportingText = { Text("Separate skills with commas", color = Color.Black) },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
+                    colors = blackTextFieldColors
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = onSave) {
-                Text("Save")
+                Text("Save", color = Color.Black)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", color = Color.Black)
             }
         }
     )
