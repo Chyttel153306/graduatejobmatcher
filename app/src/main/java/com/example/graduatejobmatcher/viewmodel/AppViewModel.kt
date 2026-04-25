@@ -216,6 +216,25 @@ class AppViewModel : ViewModel() {
         }
     }
 
+    fun getApplicationForJobAndStudent(
+        jobId: String,
+        studentId: String,
+        onResult: (Application?) -> Unit
+    ) {
+        viewModelScope.launch { onResult(repo.getApplicationForJobAndStudent(jobId, studentId)) }
+    }
+
+    fun updateApplication(application: Application, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                repo.updateApplication(application)
+                onResult(true, "")
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Application update failed. Please try again.")
+            }
+        }
+    }
+
     fun getApplicationsForJob(jobId: String, onResult: (List<Application>) -> Unit) {
         viewModelScope.launch { onResult(repo.getApplicationsForJob(jobId)) }
     }

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.graduatejobmatcher.model.Application
 import com.example.graduatejobmatcher.viewmodel.AppViewModel
 
 @Composable
@@ -27,9 +28,28 @@ fun JobDetailsScreen(
     viewModel: AppViewModel,
     jobId: String
 ) {
+    val currentUser by viewModel.currentUser.collectAsState()
     // Find job from the ViewModel's live data (real data)
     val job = viewModel.jobs.find { it.jobId == jobId }
     val primaryBlue = Color(0xFF3F51B5)
+    var existingApplication by remember { mutableStateOf<Application?>(null) }
+
+    LaunchedEffect(Unit) {
+        if (currentUser == null) {
+            viewModel.fetchCurrentUser()
+        }
+    }
+
+    LaunchedEffect(jobId, currentUser?.userId) {
+        val studentId = currentUser?.userId.orEmpty()
+        if (studentId.isBlank()) {
+            existingApplication = null
+        } else {
+            viewModel.getApplicationForJobAndStudent(jobId, studentId) { application ->
+                existingApplication = application
+            }
+        }
+    }
 
     if (job == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -56,7 +76,7 @@ fun JobDetailsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
                 ) {
                     Text(
-                        text = "Apply Now",
+                        text = if (existingApplication != null) "Edit Application" else "Apply Now",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White   // white text on blue button

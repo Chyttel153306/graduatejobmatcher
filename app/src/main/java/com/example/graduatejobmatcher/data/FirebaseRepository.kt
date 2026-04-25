@@ -252,6 +252,22 @@ class FirebaseRepository {
         db.collection("applications").document(id).set(appWithId).await()
     }
 
+    suspend fun getApplicationForJobAndStudent(jobId: String, studentId: String): Application? {
+        return db.collection("applications")
+            .whereEqualTo("jobId", jobId)
+            .whereEqualTo("studentId", studentId)
+            .limit(1)
+            .get()
+            .await()
+            .toObjects(Application::class.java)
+            .firstOrNull()
+    }
+
+    suspend fun updateApplication(application: Application) {
+        if (application.applicationId.isBlank()) throw Exception("Application ID is required")
+        db.collection("applications").document(application.applicationId).set(application).await()
+    }
+
     suspend fun getApplicationsForJob(jobId: String): List<Application> {
         return db.collection("applications").whereEqualTo("jobId", jobId).get().await().toObjects(Application::class.java)
     }

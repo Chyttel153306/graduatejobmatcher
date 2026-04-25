@@ -46,6 +46,7 @@ fun ApplyJobScreen(
     val context = LocalContext.current
     val contentResolver = context.contentResolver
     val scope = rememberCoroutineScope()
+    val currentUser by viewModel.currentUser.collectAsState()
 
     var resumeUri      by remember { mutableStateOf<Uri?>(null) }
     var portfolioUri   by remember { mutableStateOf<Uri?>(null) }
@@ -56,6 +57,8 @@ fun ApplyJobScreen(
 
     var submitState by remember { mutableStateOf(SubmitState.IDLE) }
     var errorMessage by remember { mutableStateOf("") }
+    var existingApplication by remember { mutableStateOf<Application?>(null) }
+    var loadedExistingApplication by remember { mutableStateOf(false) }
 
     val resumeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -105,6 +108,31 @@ fun ApplyJobScreen(
     val primaryBlue = Color(0xFF1A73E8)
     val green       = Color(0xFF00C853)
     val red         = Color(0xFFD32F2F)
+    val isEditingApplication = existingApplication != null
+
+    LaunchedEffect(Unit) {
+        if (currentUser == null) {
+            viewModel.fetchCurrentUser()
+        }
+    }
+
+    LaunchedEffect(jobId, currentUser?.userId) {
+        val studentId = currentUser?.userId.orEmpty()
+        if (studentId.isBlank()) return@LaunchedEffect
+
+        viewModel.getApplicationForJobAndStudent(jobId, studentId) { application ->
+            existingApplication = application
+            if (application != null && !loadedExistingApplication) {
+                resumeUri = application.resumeUrl.takeIf { it.isNotBlank() }?.let(Uri::parse)
+                portfolioUri = application.portfolioUrl.takeIf { it.isNotBlank() }?.let(Uri::parse)
+                coverLetterUri = application.coverLetterUrl.takeIf { it.isNotBlank() }?.let(Uri::parse)
+                resumeFileName = resumeUri?.displayName(contentResolver)
+                portfolioFileName = portfolioUri?.displayName(contentResolver)
+                coverLetterFileName = coverLetterUri?.displayName(contentResolver)
+                loadedExistingApplication = true
+            }
+        }
+    }
 
     Scaffold(
         containerColor = Color(0xFFF5F5F5),
@@ -137,7 +165,7 @@ fun ApplyJobScreen(
         ) {
 
             Text(
-                text = "Apply for $jobTitle",
+                text = if (isEditingApplication) "Edit application for $jobTitle" else "Apply for $jobTitle",
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -183,14 +211,19 @@ fun ApplyJobScreen(
                     submitState = submitState,
                     green = green,
                     red = red,
-                    failureMessage = errorMessage
+                    failureMessage = errorMessage,
+                    successMessage = if (isEditingApplication) {
+                        "Application updated successfully!"
+                    } else {
+                        "Application submitted successfully!"
+                    }
                 )
             }
 
             // ── Submit button
             Button(
                 onClick = {
-                    val studentId = viewModel.getCurrentUserId()
+                    val studentId = currentUser?.userId ?: viewModel.getCurrentUserId()
                     if (studentId == null) {
                         Toast.makeText(context, "Not logged in", Toast.LENGTH_SHORT).show()
                         return@Button
@@ -203,7 +236,12 @@ fun ApplyJobScreen(
                     submitState = SubmitState.LOADING
                     errorMessage = ""
 
-                    val application = Application(
+                    val existing = existingApplication
+                    val application = existing?.copy(
+                        resumeUrl = resumeUri.toString(),
+                        portfolioUrl = portfolioUri?.toString() ?: "",
+                        coverLetterUrl = coverLetterUri?.toString() ?: ""
+                    ) ?: Application(
                         jobId = jobId,
                         studentId = studentId,
                         status = "pending",
@@ -212,7 +250,7 @@ fun ApplyJobScreen(
                         coverLetterUrl = coverLetterUri?.toString() ?: ""
                     )
 
-                    viewModel.applyJob(application) { success, message ->
+                    val onResult: (Boolean, String) -> Unit = { success, message ->
                         if (success) {
                             submitState = SubmitState.SUCCESS
 
@@ -225,11 +263,17 @@ fun ApplyJobScreen(
                         } else {
                             submitState = SubmitState.FAILED
                             errorMessage = if (message.contains("already", ignoreCase = true)) {
-                                "Already submitted."
+                                "Already submitted. Open this job again to edit your application."
                             } else {
                                 message
                             }
                         }
+                    }
+
+                    if (existing != null) {
+                        viewModel.updateApplication(application, onResult)
+                    } else {
+                        viewModel.applyJob(application, onResult)
                     }
                 },
                 modifier = Modifier
@@ -247,7 +291,7 @@ fun ApplyJobScreen(
                     )
                 } else {
                     Text(
-                        text = "Submit Application",
+                        text = if (isEditingApplication) "Update Application" else "Submit Application",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color.White
@@ -287,7 +331,7 @@ private fun Uri.displayName(contentResolver: android.content.ContentResolver): S
                     lastPathSegment?.substringAfterLast('/') ?: "File Selected"
                 }
             } ?: (lastPathSegment?.substringAfterLast('/') ?: "File Selected")
-    }.getOrDefault("File Selected")
+    }.getOrDefault(lastPathSegment?.substringAfterLast('/') ?: "File Selected")
 }
 
 @Composable
@@ -295,7 +339,8 @@ private fun StatusCard(
     submitState: SubmitState,
     green: Color,
     red: Color,
-    failureMessage: String
+    failureMessage: String,
+    successMessage: String
 ) {
     val bgColor   = when (submitState) {
         SubmitState.LOADING -> Color(0xFFE3F2FD)
@@ -311,7 +356,7 @@ private fun StatusCard(
     }
     val message = when (submitState) {
         SubmitState.LOADING -> "Submitting your application..."
-        SubmitState.SUCCESS -> "Application submitted successfully!"
+        SubmitState.SUCCESS -> successMessage
         SubmitState.FAILED  -> failureMessage.ifBlank { "Submission failed. Please try again." }
         else                -> ""
     }
