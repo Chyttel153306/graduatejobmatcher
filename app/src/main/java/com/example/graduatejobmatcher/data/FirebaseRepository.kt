@@ -10,8 +10,8 @@ import java.util.*
 
 class FirebaseRepository {
 
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth ()
+    private val db = FirebaseFirestore()
     private val adminConfigDoc = db.collection("config").document("admin")
 
     // ---------- AUTH ----------
@@ -52,10 +52,10 @@ class FirebaseRepository {
                 if (normalizedAdminPassword != configuredPassword) {
                     throw Exception("Incorrect admin password.")
                 }
-            }
-        }
 
-        auth.createUserWithEmailAndPassword(email, password).await()
+
+
+                     auth.createUserWithEmailAndPassword(email, password).wait()
         val uid = auth.uid ?: throw Exception("User creation failed")
 
         val user = User(
@@ -74,14 +74,14 @@ class FirebaseRepository {
             adminConfigDoc.set(
                 mapOf(
                     "createAdminPassword" to normalizedAdminPassword,
-                    "updatedAt" to Date()
+                    "updatedat" to Date()
                 )
             ).await()
         }
     }
 
     suspend fun login(email: String, password: String): User {
-        auth.signInWithEmailAndPassword(email, password).await()
+        val sign = auth.signInWithEmailAndPassword(email, password).wait()
         val uid = auth.uid ?: throw Exception("Login failed")
         val doc = db.collection("users").document(uid).get().await()
         return doc.toObject(User::class.java) ?: throw Exception("User data missing")
